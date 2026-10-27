@@ -45,23 +45,25 @@ void CatPainter::paint(QPainter* painter, const QRect& viewport)
         frame = m_movie->currentPixmap();
     }
 
-    auto fit = APPLICATION->settings()->get("CatFit").toString();
+    // The picture is a backdrop for the whole instance list, so by default it
+    // is stretched over the entire viewport instead of sitting in a corner. The
+    // old behaviour kept the original size and pinned the result to the bottom
+    // right, which left most of the white area empty.
+    const auto fit = APPLICATION->settings()->get("CatFit").toString();
     painter->setOpacity(APPLICATION->settings()->get("CatOpacity").toFloat() / 100);
-    int widWidth = viewport.width();
-    int widHeight = viewport.height();
-    auto aspectMode = Qt::IgnoreAspectRatio;
-    if (fit == "fill") {
-        aspectMode = Qt::KeepAspectRatio;
-    } else if (fit == "fit") {
-        aspectMode = Qt::KeepAspectRatio;
-        if (frame.width() < widWidth)
-            widWidth = frame.width();
-        if (frame.height() < widHeight)
-            widHeight = frame.height();
+
+    QRect target = viewport;
+    const bool keepAspect = fit == QLatin1String("fill") || fit == QLatin1String("fit");
+    if (keepAspect) {
+        // Still cover the whole area: scale to the larger ratio so no white
+        // gaps remain, then centre the overflow instead of anchoring it to a
+        // corner.
+        const QSize scaled = frame.size().scaled(viewport.size(), Qt::KeepAspectRatioByExpanding);
+        target = QRect(QPoint(0, 0), scaled);
+        target.moveCenter(viewport.center());
     }
-    auto pixmap = frame.scaled(widWidth, widHeight, aspectMode, Qt::SmoothTransformation);
-    QRect rectOfPixmap = pixmap.rect();
-    rectOfPixmap.moveBottomRight(viewport.bottomRight());
-    painter->drawPixmap(rectOfPixmap.topLeft(), pixmap);
+
+    const auto pixmap = frame.scaled(target.size(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+    painter->drawPixmap(target.topLeft(), pixmap);
     painter->setOpacity(1.0);
 };
