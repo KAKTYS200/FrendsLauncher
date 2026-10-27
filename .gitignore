@@ -1,0 +1,102 @@
+Thumbs.db
+*.kdev4
+.user
+.directory
+resources/CMakeFiles
+*~
+*.swp
+html/
+
+# Project Files
+*.pro.user
+CMakeLists.txt.user
+CMakeLists.txt.user.*
+CMakeSettings.json
+/CMakeFiles
+CMakeCache.txt
+CMakeUserPresets.json
+/.project
+/.settings
+/.idea
+/.vscode
+/.vs
+cmake-build-*/
+Debug
+compile_commands.json
+
+# Build dirs
+build
+/build-*
+
+# Install dirs
+install
+/install-*
+
+# Ctags File
+tags
+
+# YouCompleteMe config stuff.
+.ycm_extra_conf.*
+
+#OSX Stuff
+.DS_Store
+
+branding/
+secrets/
+run/
+
+.cache/
+
+# Nix/NixOS
+.direnv/
+## Used when manually invoking stdenv phases
+outputs/
+## Regular artifacts
+result
+result-*
+repl-result-*
+
+# Flatpak
+.flatpak-builder
+flatbuild
+
+# Snap
+*.snap
+
+# ---- Frends Launcher: local build and distribution output ------------------
+# The builds live next to the sources here, and they are gigabytes. Releases
+# carry the binaries; the repository carries the code.
+/build-frends/
+/dist/
+/dist-check/
+/dist-test/
+/vcpkg_installed/
+*.gch
+*.obj
+*.o
+*.d
+*.exe
+*.dll
+*.a
+*.lib
+*.zip
+
+# Local scratch produced while testing the UI: screenshots, probe scripts,
+# captured logs. Scoped to the repository root so real assets such as
+# launcher/resources/*.png and tools/ninjatracing.py stay tracked.
+/*.png
+/*.py
+/*.log
+/*.bat
+/*.bin
+/*.bak
+/testdata/
+/testdata-friend/
+/updatesrv/
+/friendprofile-check/
+/_skinprobe/
+/_svgpkg/
+
+# Local assistant workspace data: session memory, icon previews, backups.
+# Not part of the project and not meant to be published.
+/.workbuddy-ai/

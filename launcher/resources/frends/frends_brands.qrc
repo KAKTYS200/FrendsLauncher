@@ -1,0 +1,9 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource prefix="/frends">
+        <file>brands/modrinth.png</file>
+        <file>brands/curseforge.png</file>
+        <file>brands/atlauncher.png</file>
+        <file>brands/ftb.png</file>
+    </qresource>
+</RCC>
