@@ -251,6 +251,10 @@ void MinecraftAccount::fillSession(AuthSessionPtr session)
         session->uuid = uuidFromUsername(session->player_name).toString(QUuid::Id128);
     // 'legacy' or 'mojang', depending on account type
     session->user_type = typeString();
+    // Offline accounts have no token Mojang accepts, so the game verifies
+    // against the launcher's own session server instead (see
+    // MinecraftInstance::sessionServerArguments).
+    session->offline = data.type == AccountType::Offline;
     if (!session->access_token.isEmpty()) {
         session->session = "token:" + data.accessToken() + ":" + data.profileId();
     } else {

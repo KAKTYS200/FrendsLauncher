@@ -846,6 +846,8 @@ SET(LAUNCHER_SOURCES
     ui/frends/FrendsScale.cpp
     frendskin/FrendSkinServer.cpp
     frendskin/FrendSkinServer.h
+    frendsession/FrendSessionServer.cpp
+    frendsession/FrendSessionServer.h
     ui/frends/FrendsDiagnostics.h
     ui/frends/FrendsDiagnostics.cpp
     ui/frends/FrendsServersPage.h

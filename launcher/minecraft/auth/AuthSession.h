@@ -23,6 +23,8 @@ struct AuthSession {
     QString uuid;
     // 'msa' or 'offline', depending on account type
     QString user_type;
+    // the account has no Mojang session behind it (launcher-made identity)
+    bool offline = false;
     // the actual launch mode for this session
     LaunchMode launchMode;
 };

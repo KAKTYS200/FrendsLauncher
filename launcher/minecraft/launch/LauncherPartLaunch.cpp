@@ -94,6 +94,9 @@ void LauncherPartLaunch::executeTask()
 
     m_launchScript = instance->createLaunchScript(m_session, m_targetToJoin);
     QStringList args = instance->javaArguments();
+    // Offline accounts verify themselves against the launcher's own session
+    // server instead of Mojang, which is what makes LAN worlds joinable.
+    args.append(instance->sessionServerArguments(m_session.get()));
     QString allArgs = args.join(" ");
     emit logLine("Java arguments:\n  " + m_parent->censorPrivateInfo(allArgs) + "\n", MessageLevel::Launcher);
 

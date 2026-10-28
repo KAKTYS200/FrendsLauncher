@@ -89,6 +89,11 @@ class FrendSkinServer : public QObject {
     /// Value of the "textures" profile property, base64 encoded.
     QString texturesProperty(const QString& player, const QString& uuid) const;
 
+    /// The player name whose OfflinePlayer id is the given undashed uuid, or
+    /// an empty string when no published skin matches. Used to answer session
+    /// profile lookups, which arrive by id only.
+    QString playerForUuid(const QString& uuid) const;
+
     /// The whole --userProperties argument: {"textures":["<property>"]}.
     /// Empty when no skin is published for the player.
     QString userProperties(const QString& player, const QString& uuid) const;

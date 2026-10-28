@@ -9,6 +9,8 @@
 
 #include "FrendSkinServer.h"
 
+#include "minecraft/auth/MinecraftAccount.h"
+
 #include <QCryptographicHash>
 #include <QDateTime>
 #include <QDir>
@@ -194,6 +196,17 @@ QString FrendSkinServer::seedClientCache(const QString& player, const QString& a
     out.write(png);
     out.close();
     return target;
+}
+
+QString FrendSkinServer::playerForUuid(const QString& uuid) const
+{
+    // Session profile lookups arrive by id; recover the name the same way the
+    // id was built in the first place.
+    for (auto it = m_skins.constBegin(); it != m_skins.constEnd(); ++it) {
+        if (MinecraftAccount::uuidFromUsername(it.key()).toString(QUuid::Id128) == uuid)
+            return it.key();
+    }
+    return {};
 }
 
 QString FrendSkinServer::texturesProperty(const QString& player, const QString& uuid) const

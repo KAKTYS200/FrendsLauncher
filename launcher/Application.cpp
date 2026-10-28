@@ -43,6 +43,7 @@
 #include "Application.h"
 
 #include "frendskin/FrendSkinServer.h"
+#include "frendsession/FrendSessionServer.h"
 #include "BuildConfig.h"
 
 #include "DataMigrationTask.h"
@@ -658,6 +659,8 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         m_settings->registerSetting("FrendSkinEnabled", true);
         m_settings->registerSetting("FrendSkinPort", 0);
         m_settings->registerSetting("FrendSkinBindings", QString());
+        // Offline session support: the local stand-in for Mojang's session server.
+        m_settings->registerSetting("FrendSessionPort", 0);
 
         m_settings->registerSetting("MenuBarInsteadOfToolBar", false);
 
@@ -990,6 +993,10 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
     // Frend Skin: the local skin publisher for the accounts
     m_frendSkin.reset(new FrendSkinServer(this));
     initFrendSkin();
+
+    // Local session server: lets offline accounts join LAN worlds and servers
+    m_frendSession.reset(new FrendSessionServer(this));
+    initFrendSession();
 
     // and accounts
     {
@@ -1703,6 +1710,18 @@ void Application::initFrendSkin()
     if (server->start(port)) {
         settings()->set("FrendSkinPort", server->port());
         qInfo() << "[frend-skin] serving skins on" << server->baseUrl();
+    }
+}
+
+void Application::initFrendSession()
+{
+    auto* server = frendSession();
+    if (!server)
+        return;
+
+    const auto port = quint16(settings()->get("FrendSessionPort").toInt());
+    if (server->start(port)) {
+        settings()->set("FrendSessionPort", server->port());
     }
 }
 

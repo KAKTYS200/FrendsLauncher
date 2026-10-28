@@ -46,6 +46,7 @@
 #include "FileSystem.h"
 #include "MMCTime.h"
 #include "frendskin/FrendSkinServer.h"
+#include "frendsession/FrendSessionServer.h"
 #include "java/JavaVersion.h"
 
 #include "launch/LaunchTask.h"
@@ -633,6 +634,27 @@ QStringList MinecraftInstance::javaArguments()
         // allow reflective access to java.net - required by the skin fix
         args << "--add-opens" << "java.base/java.net=ALL-UNNAMED";
 
+    return args;
+}
+
+QStringList MinecraftInstance::sessionServerArguments(const AuthSession* session)
+{
+    QStringList args;
+    if (!session || !session->offline)
+        return args;
+
+    auto* server = APPLICATION->frendSession();
+    if (!server || !server->isRunning())
+        return args;
+
+    const QString base = server->baseUrl();
+    // authlib ignores the override unless every one of these is present. Only
+    // the session server is actually impersonated; auth/account/services keep
+    // the real Mojang addresses so nothing else changes behaviour.
+    args << QString("-Dminecraft.api.auth.host=https://authserver.mojang.com")
+         << QString("-Dminecraft.api.account.host=https://api.mojang.com")
+         << QString("-Dminecraft.api.session.host=%1").arg(base)
+         << QString("-Dminecraft.api.services.host=https://api.minecraftservices.com");
     return args;
 }
 

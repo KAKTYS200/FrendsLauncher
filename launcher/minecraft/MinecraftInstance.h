@@ -131,6 +131,12 @@ class MinecraftInstance : public BaseInstance {
     QString createLaunchScript(AuthSessionPtr session, MinecraftTarget::Ptr targetToJoin);
     /// get arguments passed to java
     QStringList javaArguments();
+
+    /// The JVM properties that point authlib at the launcher's own session
+    /// server. Only returned for offline sessions: they redirect the game's
+    /// session checks to 127.0.0.1, which is what makes LAN worlds joinable,
+    /// and must never apply to an account with a real Mojang login.
+    QStringList sessionServerArguments(const AuthSession* session);
     QString getLauncher();
     bool shouldApplyOnlineFixes();
 

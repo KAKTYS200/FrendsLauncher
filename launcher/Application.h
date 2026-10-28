@@ -68,6 +68,7 @@ class QNetworkAccessManager;
 class JavaInstallList;
 class ExternalUpdater;
 class FrendSkinServer;
+class FrendSessionServer;
 class BaseProfilerFactory;
 class BaseDetachedToolFactory;
 class TranslationsModel;
@@ -135,6 +136,12 @@ class Application : public QApplication {
     /// MainWindow: "--launch" without "--show-window" never builds a window, and
     /// the launch would then find no bound skins at all.
     void initFrendSkin();
+
+    /// Local stand-in for Mojang's session server, used for offline accounts.
+    FrendSessionServer* frendSession() { return m_frendSession.get(); }
+
+    /// Starts the session server; must be up before a launch can reference it.
+    void initFrendSession();
 
     void triggerUpdateCheck();
 
@@ -261,6 +268,7 @@ class Application : public QApplication {
 
     std::unique_ptr<ExternalUpdater> m_updater;
     std::unique_ptr<FrendSkinServer> m_frendSkin;
+    std::unique_ptr<FrendSessionServer> m_frendSession;
     std::unique_ptr<AccountList> m_accounts;
 
     std::unique_ptr<HttpMetaCache> m_metacache;

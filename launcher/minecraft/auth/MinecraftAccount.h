@@ -127,7 +127,9 @@ class MinecraftAccount : public QObject, public Usable {
                 return "msa";
             } break;
             case AccountType::Offline: {
-                return "offline";
+                // The client's User$Type enum only knows legacy/mojang/msa; an
+                // unknown value makes it warn and carry a null type around.
+                return "legacy";
             } break;
             default: {
                 return "unknown";
