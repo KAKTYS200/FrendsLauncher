@@ -1,63 +1,55 @@
 <p align="center">
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="/program_info/org.prismlauncher.PrismLauncher.logo-darkmode.svg">
-  <source media="(prefers-color-scheme: light)" srcset="/program_info/org.prismlauncher.PrismLauncher.logo.svg">
-  <img alt="Prism Launcher" src="/program_info/org.prismlauncher.PrismLauncher.logo.svg" width="40%">
+  <source media="(prefers-color-scheme: dark)" srcset="/program_info/org.frends.FrendsLauncher.logo-darkmode.svg">
+  <source media="(prefers-color-scheme: light)" srcset="/program_info/org.frends.FrendsLauncher.logo.svg">
+  <img alt="Frends Launcher" src="/program_info/org.frends.FrendsLauncher.logo.svg" width="40%">
 </picture>
 </p>
 
+<h1 align="center">Frends Launcher</h1>
+
 <p align="center">
-  Prism Launcher is a custom launcher for Minecraft that allows you to easily manage multiple installations of Minecraft at once.<br />
-  <br />This is a <b>fork</b> of the MultiMC Launcher and is <b>not</b> endorsed by it.
+  Лаунчер Minecraft с офлайн-аккаунтами, своими скинами и сборками в пару кликов.<br />
+  Без навязчивого софта, без рекламы, без регистрации.
 </p>
 
-## Installation
+<p align="center">
+  <b>Версия 11.1.1</b> · Windows x64 · GPL-3.0-only
+</p>
 
-<a href="https://repology.org/project/prismlauncher/versions">
-    <img src="https://repology.org/badge/vertical-allrepos/prismlauncher.svg" alt="Packaging status" align="right">
-</a>
+## Скачать
 
-- All downloads and instructions for Prism Launcher can be found on our [Website](https://prismlauncher.org/download).
-- Last build status can be found in the [GitHub Actions](https://github.com/PrismLauncher/PrismLauncher/actions) tab (this also includes the pull requests status).
+**[FrendsLauncher-portable.zip](https://github.com/KAKTYS200/FrendsLauncher/releases/latest/download/FrendsLauncher-portable.zip)** — последняя версия, 41 МБ.
 
-### Development Builds
+1. Скачайте архив и распакуйте в любую папку (установка не нужна).
+2. Запустите `frendslauncher.exe`.
+3. Нужна **Java 17** — если её нет, лаунчер предложит скачать.
 
-Please understand that these builds are not intended for most users. There may be bugs, and other instabilities. You have been warned.
+Все версии и список изменений — в разделе [Releases](https://github.com/KAKTYS200/FrendsLauncher/releases).
 
-There are development builds available through:
+## Возможности
 
-- [GitHub Actions](https://github.com/PrismLauncher/PrismLauncher/actions) (includes builds from pull requests opened by contributors)
-- [nightly.link](https://prismlauncher.org/nightly) (this will always point only to the latest version of develop)
+- **Офлайн-аккаунты** — добавьте любой ник без лицензии Microsoft и играйте.
+- **Свои скины** — скин ставится прямо в лаунчере и работает в ванильном Minecraft 1.20.1 без Forge, Fabric и OptiFine. Лаунчер публикует скин на localhost и передаёт его клиенту через свойство `textures`, а кеш игры заполняется заранее — скин виден сразу, без обращения к сети.
+- **Сборки в пару кликов** — выбор версии, загрузчика (Vanilla / Forge / NeoForge / Fabric / Quilt), автоподстановка имени.
+- **Список серверов** с живым пингом и запуском игры прямо на нужный сервер.
+- **Свой фон** — картинка на всю область списка сборок, палитра и масштаб интерфейса настраиваются.
+- **Обновление в один клик** — кнопка со стрелкой вниз в нижней панели.
+- **Приватность** — лаунчер не отправляет статистику и не собирает идентификаторы.
 
-These have debug information in the binaries, so their file sizes are relatively larger.
+## Что внутри
 
-Prebuilt Development builds are provided for **Linux**, **Windows** and **macOS**.
+Это форк [Prism Launcher](https://github.com/PrismLauncher/PrismLauncher) 11.1.1 (который, в свою очередь, форк MultiMC). Интерфейс переписан под Frends: процедурный фон, своя боковая панель и нижняя панель с аккаунтом, сборкой и кнопкой «Войти в игру». Подробности по каждому изменению — [ниже](#изменения-в-этой-сборке).
 
-On Linux, we also offer our own [Flatpak nightly repository](https://github.com/PrismLauncher/flatpak). Most software centers are able to install it by opening [this link](https://flatpak.prismlauncher.org/prismlauncher-nightly.flatpakref).
+Frends Launcher **не связан** с Prism Launcher, MultiMC и Mojang и не поддерживается ими.
 
-## Community & Support
+## Поддержка
 
-Feel free to create a GitHub issue if you find a bug or want to suggest a new feature. We have multiple community spaces where other community members can help you:
-
-- **Our Discord server:**
-
-[![Prism Launcher Discord server](https://discordapp.com/api/guilds/1031648380885147709/widget.png?style=banner3)](https://prismlauncher.org/discord)
-
-- **Our Matrix space:**
-
-[![Prism Launcher Space](https://img.shields.io/matrix/prismlauncher:matrix.org?style=for-the-badge&label=Matrix%20Space&logo=matrix&color=purple)](https://prismlauncher.org/matrix)
-
-- **Our Subreddit:**
-
-[![r/PrismLauncher](https://img.shields.io/reddit/subreddit-subscribers/prismlauncher?style=for-the-badge&logo=reddit)](https://prismlauncher.org/reddit)
-
-## Translations
-
-The translation effort for Prism Launcher is hosted on [Weblate](https://hosted.weblate.org/projects/prismlauncher/launcher/) and information about translating Prism Launcher is available at <https://github.com/PrismLauncher/Translations>.
+Нашли баг или хотите предложить идею — создайте [issue](https://github.com/KAKTYS200/FrendsLauncher/issues).
 
 ## Изменения в этой сборке
 
-Эта копия Prism Launcher переделана под оформление Frends Launcher и поддерживает офлайн-аккаунты.
+Frends Launcher — это переработанный Prism Launcher с оформлением Frends и поддержкой офлайн-аккаунтов.
 
 ### Оформление
 
@@ -108,7 +100,7 @@ The translation effort for Prism Launcher is hosted on [Weblate](https://hosted.
 
 ## Сборка
 
-Обычные инструкции: [build instructions](https://prismlauncher.org/wiki/development/build-instructions).
+Инструкции по сборке Prism Launcher: [build instructions](https://prismlauncher.org/wiki/development/build-instructions). Окружение — MSYS2 UCRT64 + Qt6.
 
 ### Сборка с ограничением нагрузки на ЦП
 
@@ -138,38 +130,12 @@ cmake --build build --parallel 4      # или -j4
 Без скрипта исключение Defender добавляется вручную (PowerShell от администратора):
 
 ```powershell
-Add-MpPreference -ExclusionPath "C:\Users\legion\Desktop\м\frendly_lauher\build"
+Add-MpPreference -ExclusionPath "$PWD\build"
 ```
 
-## Sponsors & Partners
+## Благодарности
 
-We thank all the wonderful backers over at Open Collective! Support Prism Launcher by [becoming a backer](https://opencollective.com/prismlauncher).
-
-[![OpenCollective Backers](https://opencollective.com/prismlauncher/backers.svg?width=890&limit=1000)](https://opencollective.com/prismlauncher#backers)
-
-Thanks to JetBrains for providing us a few licenses for all their products, as part of their [Open Source program](https://www.jetbrains.com/opensource/).
-
-<a href="https://jb.gg/OpenSource">
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://www.jetbrains.com/company/brand/img/logo_jb_dos_4.svg">
-  <source media="(prefers-color-scheme: light)" srcset="https://resources.jetbrains.com/storage/products/company/brand/logos/jetbrains.svg">
-  <img alt="JetBrains logo" src="https://resources.jetbrains.com/storage/products/company/brand/logos/jetbrains.svg" width="40%">
-</picture>
-</a>
-
-Thanks to Weblate for hosting our translation efforts.
-
-<a href="https://hosted.weblate.org/engage/prismlauncher/">
-<img src="https://hosted.weblate.org/widgets/prismlauncher/-/open-graph.png" alt="Translation status" width="300" />
-</a>
-
-Thanks to Netlify for providing us their excellent web services, as part of their [Open Source program](https://www.netlify.com/open-source/).
-
-<a href="https://www.netlify.com"> <img src="https://www.netlify.com/v3/img/components/netlify-color-accent.svg" alt="Deploys by Netlify" /> </a>
-
-Thanks to the awesome people over at [MacStadium](https://www.macstadium.com/), for providing M1-Macs for development purposes!
-
-<a href="https://www.macstadium.com"><img src="https://uploads-ssl.webflow.com/5ac3c046c82724970fc60918/5c019d917bba312af7553b49_MacStadium-developerlogo.png" alt="Powered by MacStadium" width="300"></a>
+Проект стоит на плечах [Prism Launcher](https://github.com/PrismLauncher/PrismLauncher) и [MultiMC](https://github.com/MultiMC/Launcher), распространяемых под GPL-3.0. Спасибо их командам и контрибьюторам.
 
 ## Forking/Redistributing/Custom builds policy
 
@@ -189,7 +155,7 @@ Note that if you build this software without removing the provided API keys in [
 
 If you do not agree with these terms and conditions, then remove the associated API keys from the [CMakeLists.txt](CMakeLists.txt) file by setting them to an empty string (`""`).
 
-## License [![https://github.com/PrismLauncher/PrismLauncher/blob/develop/LICENSE](https://img.shields.io/github/license/PrismLauncher/PrismLauncher?label=License&logo=gnu&color=C4282D)](LICENSE)
+## Лицензия
 
 All launcher code is available under the GPL-3.0-only license.
 

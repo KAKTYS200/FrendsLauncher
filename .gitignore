@@ -100,3 +100,8 @@ flatbuild
 # Local assistant workspace data: session memory, icon previews, backups.
 # Not part of the project and not meant to be published.
 /.workbuddy-ai/
+missing.txt
+missing2.txt
+razbor.txt
+instance.cfg.workbak
+vm.json
