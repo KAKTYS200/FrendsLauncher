@@ -40,6 +40,7 @@
 #include "ui/pages/modplatform/flame/FlamePage.h"
 #include "ui/pages/modplatform/ftb/FtbPage.h"
 #include "ui/pages/modplatform/modrinth/ModrinthPage.h"
+#include "ui/pages/modplatform/TLauncherPage.h"
 
 /**
  * One source of builds, drawn as a card: a coloured square with the initial,
@@ -56,6 +57,9 @@ class ProviderTile : public QPushButton {
         setFocusPolicy(Qt::NoFocus);
         setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         setAttribute(Qt::WA_Hover, true);
+        // The card draws its own text, so nothing is set through setText() and
+        // screen readers (and UI automation) would see a nameless button.
+        setAccessibleName(m_title + QStringLiteral(" — ") + m_subtitle);
     }
 
     void setActive(bool active)
@@ -303,6 +307,14 @@ FrendsCreatePage::FrendsCreatePage(QWidget* parent) : QWidget(parent)
     translatePlatformPage(ftb);
     addProviderTile(QStringLiteral("FTB"), tr("Каталог модпаков"), QColor(0xE4, 0x00, 0x2B), false,
                     QIcon(QStringLiteral(":/frends/brands/ftb.png")));
+
+    // 5: import an existing version folder (TLauncher or the official launcher).
+    auto* importPage = new TLauncherPage(this, this);
+    m_stack->addWidget(importPage);
+    m_providerPage.push_back(importPage);
+    importPage->setStyleSheet(platformPageStyle());
+    addProviderTile(tr("Из TLauncher"), tr("Импорт версии"), QColor(0x8E, 0x5B, 0xD9), false,
+                    QIcon(QStringLiteral(":/icons/multimc/32x32/instances/dirt_legacy.png")));
 
     auto* separator = new QFrame(this);
     separator->setFrameShape(QFrame::HLine);

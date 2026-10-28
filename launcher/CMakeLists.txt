@@ -49,6 +49,8 @@ set(CORE_SOURCES
     InstanceCopyTask.cpp
     InstanceImportTask.h
     InstanceImportTask.cpp
+    TLauncherImportTask.h
+    TLauncherImportTask.cpp
 
     # Resource downloading task
     ResourceDownloadTask.h
@@ -1052,6 +1054,9 @@ SET(LAUNCHER_SOURCES
 
     ui/pages/modplatform/ImportPage.cpp
     ui/pages/modplatform/ImportPage.h
+
+    ui/pages/modplatform/TLauncherPage.cpp
+    ui/pages/modplatform/TLauncherPage.h
 
     ui/pages/modplatform/OptionalModDialog.cpp
     ui/pages/modplatform/OptionalModDialog.h

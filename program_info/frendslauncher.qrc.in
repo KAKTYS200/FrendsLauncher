@@ -1,6 +1,11 @@
 <!DOCTYPE RCC>
 <RCC version="1.0">
     <qresource prefix="/">
+        <!-- The SVG is kept for metadata/tooling, but the icon itself is served
+             from PNG: Qt decodes PNG through the QtGui image loader and needs no
+             SVG plugin, so the window icon cannot silently turn blank. -->
         <file>@Launcher_AppID@.svg</file>
+        <file>@Launcher_AppID@_256.png</file>
+        <file>@Launcher_AppID@_128.png</file>
     </qresource>
 </RCC>

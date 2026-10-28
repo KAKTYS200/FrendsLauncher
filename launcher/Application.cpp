@@ -92,6 +92,7 @@
 #include <QCommandLineParser>
 #include <QDebug>
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 #include <QFileOpenEvent>
 #include <QIcon>
@@ -1508,6 +1509,24 @@ JavaInstallList* Application::javalist()
 
 QIcon Application::logo()
 {
+    // The launcher icon is a raster image. Going through PNG avoids depending on
+    // the SVG image plugin at runtime: without it Qt loads the resource happily
+    // but renders nothing, and the window icon just disappears.
+    //
+    // The configured name carries the ".svg" suffix; everything before the last
+    // dot is the base the PNG resources are built from.
+    const auto base = BuildConfig.LAUNCHER_SVGFILENAME.section(QLatin1Char('.'), 0, -2);
+
+    QIcon icon;
+    for (const auto size : { 256, 128 }) {
+        const auto resource = QStringLiteral(":/%1_%2.png").arg(base).arg(size);
+        if (QFile::exists(resource))
+            icon.addFile(resource);
+    }
+    if (!icon.isNull())
+        return icon;
+
+    // Fall back to the SVG for anyone building with a custom icon set only.
     return QIcon(":/" + BuildConfig.LAUNCHER_SVGFILENAME);
 }
 

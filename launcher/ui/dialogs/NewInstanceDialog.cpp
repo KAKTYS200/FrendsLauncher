@@ -60,6 +60,7 @@
 
 #include "ui/pages/modplatform/CustomPage.h"
 #include "ui/pages/modplatform/ImportPage.h"
+#include "ui/pages/modplatform/TLauncherPage.h"
 #include "ui/pages/modplatform/atlauncher/AtlPage.h"
 #include "ui/pages/modplatform/flame/FlamePage.h"
 #include "ui/pages/modplatform/ftb/FtbPage.h"
@@ -217,6 +218,7 @@ QList<BasePage*> NewInstanceDialog::getPages()
     m_customPage = customPage;
     pages.append(customPage);
     pages.append(importPage);
+    pages.append(new TLauncherPage(this, this));
     pages.append(new AtlPage(this));
     if (APPLICATION->capabilities() & Application::SupportsFlame)
         pages.append(new FlamePage(this));
