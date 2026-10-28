@@ -291,6 +291,10 @@ QString ThemeManager::getCatPack(QString catName)
         themeWarningLog() << "Tried to get invalid catPack:" << catName;
     }
 
+    // There is always at least the built-in packs, but guarding here beats
+    // dereferencing end() and taking the whole launcher down over a picture.
+    if (m_catPacks.empty())
+        return {};
     return m_catPacks.begin()->second->path();
 }
 
@@ -306,6 +310,19 @@ QString ThemeManager::addCatPack(std::unique_ptr<CatPack> catPack)
 
 void ThemeManager::initializeCatPacks()
 {
+    // m_catPacksFolder is created from a relative name ("catpacks"), so it only
+    // resolved correctly while the process happened to sit in the data folder.
+    // Already with an absolute --dir, or any later change of the working
+    // directory, the scan looked at an empty place and the picker came up with
+    // nothing but the built-in pictures. Pinning it once fixes that.
+    if (m_catPacksFolder.isRelative()) {
+        // Prefer the actual data root: the tests build a ThemeManager without a
+        // real Application, and for them the working directory is accurate.
+        auto* app = dynamic_cast<Application*>(QCoreApplication::instance());
+        const QString base = app ? app->dataRoot() : QDir::currentPath();
+        m_catPacksFolder = QDir(QDir(base).absoluteFilePath(m_catPacksFolder.path()));
+    }
+
     QList<std::pair<QString, QString>> defaultCats{ { "kitteh", QObject::tr("Background Cat (from MultiMC)") },
                                                     { "rory", QObject::tr("Rory ID 11 (drawn by Ashtaka)") },
                                                     { "rory-flat", QObject::tr("Rory ID 11 (flat edition, drawn by Ashtaka)") },

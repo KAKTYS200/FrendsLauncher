@@ -37,6 +37,8 @@
 #include "AppearanceWidget.h"
 #include "ui_AppearanceWidget.h"
 
+#include <algorithm>
+
 #include <DesktopServices.h>
 #include <QGraphicsOpacityEffect>
 #include "BuildConfig.h"
@@ -223,15 +225,24 @@ void AppearanceWidget::loadThemeSettings()
     if (!m_themesOnly) {
         const QString currentCat = settings->get("BackgroundCat").toString();
         const auto cats = APPLICATION->themeManager()->getValidCatPacks();
-        for (int i = 0; i < cats.count(); ++i) {
-            const CatPack* cat = cats[i];
-
+        // getValidCatPacks() walks a std::map keyed by id, so the list came out
+        // in id order: all built-in pictures first, the user's own files last
+        // and scattered between them. With a long list that reads as "my new
+        // picture is missing". Sorting by the visible name makes the order
+        // match what the combo box shows.
+        QList<const CatPack*> sorted(cats.constBegin(), cats.constEnd());
+        std::sort(sorted.begin(), sorted.end(), [](const CatPack* lhs, const CatPack* rhs) {
+            return QString::localeAwareCompare(lhs->name(), rhs->name()) < 0;
+        });
+        for (const CatPack* cat : sorted) {
             QIcon catIcon = QIcon(QString("%1").arg(cat->path()));
             m_ui->catPackComboBox->addItem(catIcon, cat->name(), cat->id());
-
-            if (currentCat == cat->id())
-                m_ui->catPackComboBox->setCurrentIndex(i);
         }
+        // Select after the list is filled: setting the index inside the loop
+        // only worked while the wanted entry happened to be added last.
+        const int currentIndex = m_ui->catPackComboBox->findData(currentCat);
+        if (currentIndex >= 0)
+            m_ui->catPackComboBox->setCurrentIndex(currentIndex);
     }
 
     m_ui->iconsComboBox->blockSignals(false);

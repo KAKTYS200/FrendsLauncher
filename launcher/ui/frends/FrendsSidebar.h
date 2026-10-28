@@ -70,7 +70,6 @@ class FrendsSidebar : public QWidget {
     QPushButton* m_instancesButton = nullptr;
     QPushButton* m_addButton = nullptr;
     QPushButton* m_serversButton = nullptr;
-    QPushButton* m_modsButton = nullptr;
     QPushButton* m_accountsButton = nullptr;
     QPushButton* m_settingsButton = nullptr;
     QPushButton* m_logsButton = nullptr;

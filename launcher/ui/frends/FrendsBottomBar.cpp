@@ -279,10 +279,14 @@ void FrendsBottomBar::applyScale()
 
     styleWidgets(s);
 
-    const int comboWidth = FrendsScale::px(230, this);
-    // The bar has a lot to fit. The combos give way first and elide their text
-    // instead of pushing the checkbox and the buttons over each other.
-    const int comboMinWidth = FrendsScale::px(96, this);
+    // The account and version pickers carry the whole profile ("kaktys2009
+    // (offline)" and a full instance name), and at the old 230px ceiling both
+    // were elided to a couple of characters. They get a much wider cap and a
+    // firmer minimum, so the bar shows the real names instead of "kakty...".
+    const int comboWidth = FrendsScale::px(320, this);
+    // The bar has a lot to fit. The combos still give way before the buttons,
+    // but they keep enough room to stay readable.
+    const int comboMinWidth = FrendsScale::px(150, this);
     for (auto* combo : { m_accountCombo, m_instanceCombo }) {
         combo->setMinimumWidth(comboMinWidth);
         combo->setMaximumWidth(comboWidth);

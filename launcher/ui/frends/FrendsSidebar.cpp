@@ -64,7 +64,6 @@ FrendsSidebar::FrendsSidebar(QWidget* parent) : QWidget(parent)
     m_instancesButton = addNavigationButton(QStringLiteral("instances"));
     m_addButton = addNavigationButton(QStringLiteral("add"));
     m_serversButton = addNavigationButton(QStringLiteral("servers"));
-    m_modsButton = addNavigationButton(QStringLiteral("mods"));
     m_accountsButton = addNavigationButton(QStringLiteral("accounts"));
     m_settingsButton = addNavigationButton(QStringLiteral("settings"));
     m_logsButton = addNavigationButton(QStringLiteral("logs"));
@@ -74,7 +73,6 @@ FrendsSidebar::FrendsSidebar(QWidget* parent) : QWidget(parent)
     m_layout->addWidget(m_instancesButton);
     m_layout->addWidget(m_addButton);
     m_layout->addWidget(m_serversButton);
-    m_layout->addWidget(m_modsButton);
     m_layout->addWidget(m_accountsButton);
     m_layout->addWidget(m_settingsButton);
     m_layout->addWidget(m_logsButton);
@@ -225,8 +223,6 @@ void FrendsSidebar::setNavigationTexts()
         m_addButton->setText(tr("Создать сборку"));
     if (m_serversButton)
         m_serversButton->setText(tr("Серверы"));
-    if (m_modsButton)
-        m_modsButton->setText(tr("Моды"));
     if (m_accountsButton)
         m_accountsButton->setText(tr("Аккаунты"));
     if (m_settingsButton)
