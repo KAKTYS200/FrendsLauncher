@@ -84,6 +84,15 @@ QString comboStyle(qreal scale)
                "  border: none;"
                "  background: #e9e9e9;"
                "}"
+               // Styling drop-down drops the native indicator, so the arrow has
+               // to be drawn back in - otherwise the field ends in a blank grey
+               // block. A real image is used because the CSS border-triangle
+               // trick does not apply to QSS sub-controls.
+               "QComboBox::down-arrow {"
+               "  image: url(:/frends/combo-arrow-down.svg);"
+               "  width: %6px;"
+               "  height: %7px;"
+               "}"
                "QComboBox QAbstractItemView {"
                "  background: #ffffff;"
                "  color: #2b2b2b;"
@@ -95,7 +104,9 @@ QString comboStyle(qreal scale)
         .arg(qRound(8 * scale))
         .arg(qRound(22 * scale))
         .arg(qMax(9, int(qRound(12 * scale))))
-        .arg(qRound(22 * scale));
+        .arg(qRound(22 * scale))
+        .arg(qMax(8, int(qRound(10 * scale))))
+        .arg(qMax(5, int(qRound(6 * scale))));
 }
 
 QString iconButtonStyle()
@@ -283,10 +294,12 @@ void FrendsBottomBar::applyScale()
     // (offline)" and a full instance name), and at the old 230px ceiling both
     // were elided to a couple of characters. They get a much wider cap and a
     // firmer minimum, so the bar shows the real names instead of "kakty...".
-    const int comboWidth = FrendsScale::px(320, this);
+    const int comboWidth = FrendsScale::px(360, this);
     // The bar has a lot to fit. The combos still give way before the buttons,
-    // but they keep enough room to stay readable.
-    const int comboMinWidth = FrendsScale::px(150, this);
+    // but they keep enough room to stay readable: at 150px a name like
+    // "kaktys2009 (offline)" was already cut, and the whole point of the wider
+    // cap was to show the real profile instead of an ellipsis.
+    const int comboMinWidth = FrendsScale::px(195, this);
     for (auto* combo : { m_accountCombo, m_instanceCombo }) {
         combo->setMinimumWidth(comboMinWidth);
         combo->setMaximumWidth(comboWidth);
