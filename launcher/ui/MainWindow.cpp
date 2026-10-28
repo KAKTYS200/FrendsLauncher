@@ -84,6 +84,9 @@
 #include <QWidget>
 #include <QWidgetAction>
 #include <QIcon>
+#include <QJsonArray>
+#include <QProcess>
+#include <QStandardPaths>
 #include <memory>
 
 #include <BaseInstance.h>
@@ -129,6 +132,7 @@
 #include "ui/themes/ITheme.h"
 #include "ui/themes/ThemeManager.h"
 #include "frendskin/FrendSkinServer.h"
+#include "FrendsSelfUpdate.h"
 #include "ui/frends/FrendsBottomBar.h"
 #include "ui/frends/FrendsScale.h"
 #include "ui/frends/FrendsServersPage.h"
@@ -1035,24 +1039,9 @@ void MainWindow::frendsShowCreatePage()
         m_frendsSidebar->setActivePage(QStringLiteral("add"));
 }
 
-/// The manifest of a launcher update: {"version": "1.1", "url": "https://.../frendslauncher.exe"}.
+/// Asks GitHub for the newest release and offers to install it.
 void MainWindow::frendsUpdateLauncher()
 {
-    const QString manifestUrl = APPLICATION->settings()->get("FrendsLauncherUpdateUrl").toString();
-    qWarning() << "[frends-update] triggered, manifest url:" << manifestUrl;
-    if (manifestUrl.isEmpty()) {
-        CustomMessageBox::selectable(
-            this, tr("Обновление лаунчера"),
-            tr("Источник обновлений не настроен.\n\n"
-               "Добавьте в файл frendslauncher.cfg строку вида\n"
-               "FrendsLauncherUpdateUrl=https://ваш-сайт/manifest.json\n\n"
-               "Файл манифеста должен содержать версию и адрес нового лаунчера:\n"
-               "{\"version\": \"1.1\", \"url\": \"https://ваш-сайт/frendslauncher.exe\"}"),
-            QMessageBox::Information)
-            ->exec();
-        return;
-    }
-
     if (m_launcherUpdateReply) {
         // A check or a download is already running.
         return;
@@ -1061,49 +1050,50 @@ void MainWindow::frendsUpdateLauncher()
     if (m_frendsBottomBar)
         m_frendsBottomBar->showDownloadProgress(tr("Проверка обновления лаунчера…"));
 
-    QNetworkRequest request(manifestUrl);
+    // The newest release is read straight from the project's GitHub page, so
+    // publishing a tag is all it takes to ship an update: no manifest to keep
+    // in sync and no file to point at by hand.
+    QNetworkRequest request(
+        QUrl(QStringLiteral("%1/releases/latest").arg(BuildConfig.UPDATER_GITHUB_REPO)));
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+    request.setRawHeader("Accept", "application/vnd.github+json");
+    request.setRawHeader("User-Agent", APPLICATION->getUserAgent().toUtf8());
+
     m_launcherUpdateReply = APPLICATION->network()->get(request);
     connect(m_launcherUpdateReply, &QNetworkReply::finished, this, [this] {
         auto* reply = m_launcherUpdateReply.data();
         m_launcherUpdateReply.clear();
-        qWarning() << "[frends-update] manifest finished, error:" << reply->error() << reply->errorString();
         reply->deleteLater();
 
-        m_frendsBottomBar->hideDownloadProgress();
+        if (m_frendsBottomBar)
+            m_frendsBottomBar->hideDownloadProgress();
 
         if (reply->error() != QNetworkReply::NoError) {
+            qWarning() << "[frends-update] release check failed:" << reply->errorString();
             CustomMessageBox::selectable(this, tr("Обновление лаунчера"),
-                                         tr("Не удалось проверить обновления: %1").arg(reply->errorString()),
+                                         tr("Не удалось проверить обновления на GitHub: %1").arg(reply->errorString()),
                                          QMessageBox::Warning)
                 ->exec();
             return;
         }
 
-        const QByteArray body = reply->readAll();
         QJsonParseError parseError;
-        const auto document = QJsonDocument::fromJson(body, &parseError);
-        qWarning() << "[frends-update] manifest body" << body.size() << "bytes, parse error:" << parseError.error
-                   << parseError.errorString();
+        const auto document = QJsonDocument::fromJson(reply->readAll(), &parseError);
         if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
-            CustomMessageBox::selectable(this, tr("Обновление лаунчера"),
-                                         tr("Манифест обновления повреждён."), QMessageBox::Warning)
+            qWarning() << "[frends-update] unexpected answer:" << parseError.errorString();
+            CustomMessageBox::selectable(this, tr("Обновление лаунчера"), tr("GitHub вернул неожиданный ответ."),
+                                         QMessageBox::Warning)
                 ->exec();
             return;
         }
 
-        const QString remoteVersion = document.object().value("version").toString();
-        const QString downloadUrl = document.object().value("url").toString();
-        qWarning() << "[frends-update] manifest ok, remote version:" << remoteVersion << "url:" << downloadUrl;
-        if (downloadUrl.isEmpty()) {
-            CustomMessageBox::selectable(this, tr("Обновление лаунчера"),
-                                         tr("В манифесте нет адреса лаунчера."), QMessageBox::Warning)
-                ->exec();
-            return;
-        }
+        const auto release = document.object();
+        const auto tag = release.value("tag_name").toString();
+        const auto releaseName = release.value("name").toString(tag);
+        const auto currentVersion = BuildConfig.versionString();
+        qWarning() << "[frends-update] latest tag:" << tag << "current:" << currentVersion;
 
-        const QString currentVersion = BuildConfig.versionString();
-        if (!remoteVersion.isEmpty() && remoteVersion == currentVersion) {
+        if (!FrendsSelfUpdate::isNewerVersion(tag, currentVersion)) {
             CustomMessageBox::selectable(this, tr("Обновление лаунчера"),
                                          tr("У вас последняя версия лаунчера (%1).").arg(currentVersion),
                                          QMessageBox::Information)
@@ -1111,26 +1101,59 @@ void MainWindow::frendsUpdateLauncher()
             return;
         }
 
-        frendsDownloadLauncherUpdate(downloadUrl, remoteVersion);
+        // The portable archive is what carries the whole build; replacing only
+        // the executable would leave the Qt libraries at the old version.
+        QString downloadUrl;
+        for (const auto& value : release.value("assets").toArray()) {
+            const auto asset = value.toObject();
+            const auto name = asset.value("name").toString();
+            if (!name.endsWith(QStringLiteral(".zip"), Qt::CaseInsensitive))
+                continue;
+            // Prefer the portable build when a release has several archives.
+            if (downloadUrl.isEmpty() || name.contains(QStringLiteral("portable"), Qt::CaseInsensitive))
+                downloadUrl = asset.value("browser_download_url").toString();
+        }
+
+        if (downloadUrl.isEmpty()) {
+            CustomMessageBox::selectable(this, tr("Обновление лаунчера"),
+                                         tr("В релизе %1 нет архива с лаунчером.").arg(tag), QMessageBox::Warning)
+                ->exec();
+            return;
+        }
+
+        auto* box = CustomMessageBox::selectable(this, tr("Обновление лаунчера"),
+                                                 tr("Доступна новая версия: %1\nУ вас установлена: %2\n\n"
+                                                    "Скачать и установить сейчас?")
+                                                     .arg(releaseName, currentVersion),
+                                                 QMessageBox::Question, QMessageBox::Yes | QMessageBox::No);
+        connect(box, &QDialog::finished, this, [this, downloadUrl, tag](int result) {
+            // QMessageBox reports the pressed standard button, not QDialog::Accepted.
+            if (result != QMessageBox::Yes)
+                return;
+            frendsDownloadLauncherUpdate(downloadUrl, tag);
+        });
+        box->exec();
     });
 }
 
 void MainWindow::frendsDownloadLauncherUpdate(const QString& url, const QString& version)
 {
-    qWarning() << "[frends-update] downloading" << url << "version" << version;
-    const QString exePath = QCoreApplication::applicationFilePath();
-    const QString targetPath = exePath + QStringLiteral(".new");
+    const auto tempRoot = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
+    const auto updateDir = QDir(tempRoot).absoluteFilePath(QStringLiteral("frends-update-%1").arg(version));
+    const auto archivePath = updateDir + QStringLiteral(".zip");
 
+    qWarning() << "[frends-update] downloading" << url << "into" << updateDir;
     m_frendsBottomBar->showDownloadProgress(tr("Скачивание лаунчера…"));
 
-    QNetworkRequest request(url);
+    QNetworkRequest request{ QUrl(url) };
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+    request.setRawHeader("User-Agent", APPLICATION->getUserAgent().toUtf8());
     m_launcherUpdateReply = APPLICATION->network()->get(request);
     auto* reply = m_launcherUpdateReply.data();
 
     connect(reply, &QNetworkReply::downloadProgress, m_frendsBottomBar, &FrendsBottomBar::setDownloadProgress);
 
-    connect(reply, &QNetworkReply::finished, this, [this, reply, targetPath, version] {
+    connect(reply, &QNetworkReply::finished, this, [this, reply, updateDir, archivePath, version] {
         m_launcherUpdateReply.clear();
 
         if (reply->error() != QNetworkReply::NoError) {
@@ -1144,7 +1167,8 @@ void MainWindow::frendsDownloadLauncherUpdate(const QString& url, const QString&
             return;
         }
 
-        QFile file(targetPath);
+        QDir().mkpath(QFileInfo(archivePath).absolutePath());
+        QFile file(archivePath);
         if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
             m_frendsBottomBar->hideDownloadProgress();
             reply->deleteLater();
@@ -1160,34 +1184,58 @@ void MainWindow::frendsDownloadLauncherUpdate(const QString& url, const QString&
 
         m_frendsBottomBar->hideDownloadProgress();
 
-        auto message = tr("Лаунчер %1 скачан.\n\nУстановить и перезапустить сейчас?").arg(version);
-        auto* box = CustomMessageBox::selectable(this, tr("Обновление лаунчера"), message, QMessageBox::Question,
-                                                 QMessageBox::Yes | QMessageBox::No);
-        connect(box, &QDialog::finished, this, [this, targetPath, version](int result) {
-            // QMessageBox reports the pressed standard button, not QDialog::Accepted.
+        // Unpack next to the download, so the new build can be started from
+        // there and copy itself over the installed one.
+        QDir(updateDir).removeRecursively();
+        QDir().mkpath(updateDir);
+        if (!MMCZip::extractDir(archivePath, updateDir)) {
+            CustomMessageBox::selectable(this, tr("Обновление лаунчера"),
+                                         tr("Не удалось распаковать скачанный архив."), QMessageBox::Critical)
+                ->exec();
+            return;
+        }
+        QFile::remove(archivePath);
+
+        const auto newExe = QDir(updateDir).absoluteFilePath(QStringLiteral("frendslauncher.exe"));
+        if (!QFileInfo::exists(newExe)) {
+            CustomMessageBox::selectable(this, tr("Обновление лаунчера"),
+                                         tr("В скачанном архиве нет frendslauncher.exe."), QMessageBox::Critical)
+                ->exec();
+            return;
+        }
+
+        auto* box = CustomMessageBox::selectable(this, tr("Обновление лаунчера"),
+                                                 tr("Лаунчер %1 скачан.\n\nУстановить и перезапустить сейчас?")
+                                                     .arg(version),
+                                                 QMessageBox::Question, QMessageBox::Yes | QMessageBox::No);
+        connect(box, &QDialog::finished, this, [this, updateDir, newExe, version](int result) {
             if (result != QMessageBox::Yes)
                 return;
 
-            // Windows refuses to replace a running executable, so the old one
-            // is renamed out of the way and the new file takes its place.
-            const QString exePath = QCoreApplication::applicationFilePath();
-            const QString oldPath = exePath + QStringLiteral(".old");
-            QFile::remove(oldPath);
-            if (!QFile::rename(exePath, oldPath) || !QFile::rename(targetPath, exePath)) {
+            // Windows refuses to replace a running executable and its libraries,
+            // so the unpacked copy is started and it does the replacing once
+            // this process is gone.
+            QStringList forwarded = QCoreApplication::arguments();
+            if (!forwarded.isEmpty())
+                forwarded.removeFirst();
+            // Both directories are spelled out: the helper runs before the Qt
+            // application object exists, so it cannot ask for its own path.
+            forwarded << QString::fromLatin1(FrendsSelfUpdate::kApplyFlag)
+                      << QCoreApplication::applicationDirPath() << updateDir;
+
+            qWarning() << "[frends-update] handing over to" << newExe << forwarded;
+            if (!QProcess::startDetached(newExe, forwarded)) {
                 CustomMessageBox::selectable(this, tr("Обновление лаунчера"),
-                                             tr("Не удалось заменить файл лаунчера."), QMessageBox::Critical)
+                                             tr("Не удалось запустить новую версию из %1.").arg(updateDir),
+                                             QMessageBox::Critical)
                     ->exec();
                 return;
             }
-
-            const QString dataDir = APPLICATION->settings()->get("InstanceDir").toString();
-            QProcess::startDetached(exePath, { QStringLiteral("--dir"), QFileInfo(dataDir).dir().path() });
             APPLICATION->quit();
         });
         box->exec();
     });
 }
-
 void MainWindow::frendsOpenMods()
 {
     if (!m_selectedInstance && APPLICATION->instances()->count() > 0)

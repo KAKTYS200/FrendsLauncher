@@ -795,6 +795,8 @@ SET(LAUNCHER_SOURCES
     # Application base
     Application.h
     Application.cpp
+    FrendsSelfUpdate.h
+    FrendsSelfUpdate.cpp
     DataMigrationTask.h
     DataMigrationTask.cpp
     ApplicationMessage.h
@@ -1541,6 +1543,12 @@ if(WIN32 OR (DEFINED Launcher_BUILD_FILELINKER AND Launcher_BUILD_FILELINKER))
 
     if(${Launcher_USE_PCH})
         target_precompile_headers("${Launcher_Name}_filelink" REUSE_FROM filelink_logic)
+        # Same GCC 16 quirk as the main target: Qt adds -DQT_NEEDS_QMAIN for an
+        # executable, which no longer matches the shared PCH, and -Werror turns
+        # the resulting note into a hard error.
+        if(MINGW)
+            target_compile_options("${Launcher_Name}_filelink" PRIVATE -Wno-error=invalid-pch)
+        endif()
     endif()
 
     # HACK: Fix manifest issues with Ninja in release mode (and only release mode) and MSVC

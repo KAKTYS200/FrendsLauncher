@@ -213,6 +213,10 @@ FrendsBottomBar::FrendsBottomBar(QWidget* parent) : QWidget(parent)
         button->setIcon(themedIcon(name, fallback));
         button->setCursor(Qt::PointingHandCursor);
         button->setStyleSheet(iconButtonStyle());
+        // These buttons carry only a glyph, so nothing sets their text and a
+        // screen reader (or UI automation) would see four nameless buttons.
+        // The name is filled in by retranslate().
+        button->setAccessibleName(name);
         m_layout->addWidget(button);
         return button;
     };
@@ -294,12 +298,12 @@ void FrendsBottomBar::applyScale()
     // (offline)" and a full instance name), and at the old 230px ceiling both
     // were elided to a couple of characters. They get a much wider cap and a
     // firmer minimum, so the bar shows the real names instead of "kakty...".
-    const int comboWidth = FrendsScale::px(360, this);
+    const int comboWidth = FrendsScale::px(440, this);
     // The bar has a lot to fit. The combos still give way before the buttons,
     // but they keep enough room to stay readable: at 150px a name like
     // "kaktys2009 (offline)" was already cut, and the whole point of the wider
     // cap was to show the real profile instead of an ellipsis.
-    const int comboMinWidth = FrendsScale::px(195, this);
+    const int comboMinWidth = FrendsScale::px(250, this);
     for (auto* combo : { m_accountCombo, m_instanceCombo }) {
         combo->setMinimumWidth(comboMinWidth);
         combo->setMaximumWidth(comboWidth);
@@ -410,14 +414,22 @@ void FrendsBottomBar::retranslate()
         m_modsButton->setText(QStringLiteral("СОЗДАТЬ\nСБОРКУ"));
         m_modsButton->setToolTip(tr("Открыть вкладку создания сборки"));
     }
-    if (m_refreshButton)
+    if (m_refreshButton) {
         m_refreshButton->setToolTip(tr("Обновить список сборок"));
-    if (m_launcherUpdateButton)
+        m_refreshButton->setAccessibleName(tr("Обновить список сборок"));
+    }
+    if (m_launcherUpdateButton) {
         m_launcherUpdateButton->setToolTip(tr("Обновить лаунчер"));
-    if (m_folderButton)
+        m_launcherUpdateButton->setAccessibleName(tr("Обновить лаунчер"));
+    }
+    if (m_folderButton) {
         m_folderButton->setToolTip(tr("Открыть папку сборки"));
-    if (m_settingsButton)
+        m_folderButton->setAccessibleName(tr("Открыть папку сборки"));
+    }
+    if (m_settingsButton) {
         m_settingsButton->setToolTip(tr("Настройки"));
+        m_settingsButton->setAccessibleName(tr("Настройки"));
+    }
 }
 
 void FrendsBottomBar::setRunning(bool running)

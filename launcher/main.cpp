@@ -35,7 +35,10 @@
 
 #include <iostream>
 
+#include <QStringList>
+
 #include "Application.h"
+#include "FrendsSelfUpdate.h"
 
 #if defined Q_OS_WIN32
 #include "console/WindowsConsole.h"
@@ -47,6 +50,21 @@ int main(int argc, char* argv[])
     // used on Windows to attach the standard IO streams
     console::WindowsConsoleGuard _consoleGuard;
 #endif
+
+    // A freshly downloaded build starts itself with a flag to copy its files
+    // over the installed launcher. That has to happen before anything else
+    // touches the settings or the window.
+    {
+        QStringList arguments;
+        arguments.reserve(argc);
+        for (int i = 0; i < argc; ++i)
+            arguments.append(QString::fromLocal8Bit(argv[i]));
+
+        if (FrendsSelfUpdate::runUpdateHelperIfRequested(arguments))
+            return 0;
+    }
+
+    FrendsSelfUpdate::cleanupStaleUpdates();
 
     // initialize Qt
     Application app(argc, argv);
