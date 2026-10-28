@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <b>Версия 11.1.1</b> · Windows x64 · GPL-3.0-only
+  <b>Версия 2.0.0</b> · Windows x64 · GPL-3.0-only
 </p>
 
 ## Скачать
