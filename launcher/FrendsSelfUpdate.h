@@ -52,4 +52,14 @@ void cleanupStaleUpdates();
 /// True when `remote` (a release tag such as "v2.1") is newer than `current`.
 bool isNewerVersion(const QString& remote, const QString& current);
 
+/**
+ * Turns a repository web address into the API endpoint for its latest release.
+ *
+ * "https://github.com/Owner/Repo" becomes
+ * "https://api.github.com/repos/Owner/Repo/releases/latest". Asking the web
+ * address instead returns the release page as HTML, which is not something that
+ * can be parsed for a tag name and asset list.
+ */
+QString latestReleaseApiUrl(const QString& repositoryUrl);
+
 }  // namespace FrendsSelfUpdate

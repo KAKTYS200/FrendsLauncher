@@ -1050,11 +1050,12 @@ void MainWindow::frendsUpdateLauncher()
     if (m_frendsBottomBar)
         m_frendsBottomBar->showDownloadProgress(tr("Проверка обновления лаунчера…"));
 
-    // The newest release is read straight from the project's GitHub page, so
-    // publishing a tag is all it takes to ship an update: no manifest to keep
-    // in sync and no file to point at by hand.
-    QNetworkRequest request(
-        QUrl(QStringLiteral("%1/releases/latest").arg(BuildConfig.UPDATER_GITHUB_REPO)));
+    // The newest release is read from the GitHub API, so publishing a tag is all
+    // it takes to ship an update: no manifest to keep in sync and no file to
+    // point at by hand. The configured address is a repository web page, which
+    // has to be turned into the API endpoint first - asking the page itself
+    // returns the HTML of the release instead of JSON.
+    QNetworkRequest request{ QUrl(FrendsSelfUpdate::latestReleaseApiUrl(BuildConfig.UPDATER_GITHUB_REPO)) };
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
     request.setRawHeader("Accept", "application/vnd.github+json");
     request.setRawHeader("User-Agent", APPLICATION->getUserAgent().toUtf8());
@@ -1078,9 +1079,14 @@ void MainWindow::frendsUpdateLauncher()
         }
 
         QJsonParseError parseError;
-        const auto document = QJsonDocument::fromJson(reply->readAll(), &parseError);
+        const auto body = reply->readAll();
+        const auto document = QJsonDocument::fromJson(body, &parseError);
         if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
-            qWarning() << "[frends-update] unexpected answer:" << parseError.errorString();
+            // The offset and the start of the body are logged because the usual
+            // reason for this is not a broken answer but the wrong address: the
+            // repository web page answers with its HTML instead of JSON.
+            qWarning() << "[frends-update] unexpected answer:" << parseError.errorString() << "at" << parseError.offset
+                       << "size" << body.size() << "start" << body.left(120);
             CustomMessageBox::selectable(this, tr("Обновление лаунчера"), tr("GitHub вернул неожиданный ответ."),
                                          QMessageBox::Warning)
                 ->exec();

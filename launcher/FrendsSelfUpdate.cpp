@@ -145,6 +145,31 @@ bool runUpdateHelperIfRequested(const QStringList& arguments)
     return true;
 }
 
+QString latestReleaseApiUrl(const QString& repositoryUrl)
+{
+    QString base = repositoryUrl.trimmed();
+    while (base.endsWith(QLatin1Char('/')))
+        base.chop(1);
+
+    // An API address may already be configured; only the suffix is missing then.
+    if (base.contains(QStringLiteral("api.github.com"))) {
+        if (base.endsWith(QStringLiteral("/releases/latest")))
+            return base;
+        if (base.endsWith(QStringLiteral("/repos")))
+            return base + QStringLiteral("/OWNER/REPO");
+    }
+
+    if (base.contains(QStringLiteral("github.com"))) {
+        const int ownerStart = base.indexOf(QStringLiteral("github.com")) + int(qstrlen("github.com")) + 1;
+        QString path = base.mid(ownerStart);
+        if (path.endsWith(QStringLiteral(".git")))
+            path.chop(4);
+        return QStringLiteral("https://api.github.com/repos/%1/releases/latest").arg(path);
+    }
+
+    return base + QStringLiteral("/releases/latest");
+}
+
 void cleanupStaleUpdates()
 {
     const auto tempRoot = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
