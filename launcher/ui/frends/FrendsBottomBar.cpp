@@ -115,7 +115,7 @@ QString iconButtonStyle()
         "QToolButton {"
         "  background: transparent;"
         "  border: none;"
-        "  padding: 4px;"
+        "  padding: 2px;"
         "}"
         "QToolButton:hover { background: rgba(255, 255, 255, 40); border-radius: 4px; }"
         "QToolButton:pressed { background: rgba(0, 0, 0, 30); border-radius: 4px; }");
@@ -288,37 +288,44 @@ void FrendsBottomBar::applyScale()
     const qreal s = FrendsScale::factor(this);
 
     setFixedHeight(FrendsScale::px(62, this));
-    m_layout->setContentsMargins(FrendsScale::px(14, this), FrendsScale::px(10, this), FrendsScale::px(14, this),
+    // Tight margins and gaps: the row is the busiest place in the launcher and
+    // at the base window width it only fits with everything drawn in close.
+    m_layout->setContentsMargins(FrendsScale::px(10, this), FrendsScale::px(10, this), FrendsScale::px(10, this),
                                  FrendsScale::px(10, this));
-    m_layout->setSpacing(FrendsScale::px(10, this));
+    m_layout->setSpacing(FrendsScale::px(7, this));
 
     styleWidgets(s);
 
     // The account and version pickers carry the whole profile ("kaktys2009
     // (offline)" and a full instance name), and at the old 230px ceiling both
-    // were elided to a couple of characters. They get a much wider cap and a
-    // firmer minimum, so the bar shows the real names instead of "kakty...".
+    // were elided to a couple of characters. They keep a wide cap, but the
+    // minimum is capped by what actually fits: the row holds two combos, the
+    // play button, the mods button, the update checkbox and four icon buttons,
+    // and at the 1067px base window width anything above ~210px per combo
+    // pushes the right-hand buttons out of the window and on top of each other.
     const int comboWidth = FrendsScale::px(440, this);
     // The bar has a lot to fit. The combos still give way before the buttons,
     // but they keep enough room to stay readable: at 150px a name like
     // "kaktys2009 (offline)" was already cut, and the whole point of the wider
     // cap was to show the real profile instead of an ellipsis.
-    const int comboMinWidth = FrendsScale::px(250, this);
+    const int comboMinWidth = FrendsScale::px(210, this);
     for (auto* combo : { m_accountCombo, m_instanceCombo }) {
         combo->setMinimumWidth(comboMinWidth);
         combo->setMaximumWidth(comboWidth);
         combo->setIconSize(QSize(FrendsScale::px(16, this), FrendsScale::px(16, this)));
     }
 
-    const QSize playSize(FrendsScale::px(220, this), FrendsScale::px(42, this));
+    const QSize playSize(FrendsScale::px(180, this), FrendsScale::px(42, this));
     m_playButton->setMinimumSize(playSize);
     m_playButton->setMaximumHeight(playSize.height());
 
-    m_modsButton->setFixedWidth(FrendsScale::px(64, this));
+    m_modsButton->setFixedWidth(FrendsScale::px(56, this));
     m_modsButton->setMinimumHeight(FrendsScale::px(42, this));
 
     const QSize iconSize(FrendsScale::px(22, this), FrendsScale::px(22, this));
-    for (auto* button : { m_refreshButton, m_folderButton, m_settingsButton })
+    // m_launcherUpdateButton used to be left out here, so its icon kept the
+    // style default and came out visibly bigger than its neighbours'.
+    for (auto* button : { m_refreshButton, m_launcherUpdateButton, m_folderButton, m_settingsButton })
         button->setIconSize(iconSize);
 }
 
