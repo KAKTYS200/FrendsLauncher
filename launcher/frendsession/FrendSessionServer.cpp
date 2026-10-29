@@ -207,7 +207,8 @@ QJsonObject FrendSessionServer::profileJson(const QString& name) const
     QJsonArray properties;
     // Publish the launcher's own skin, so LAN players do not all look like
     // Steve. The payload is the same one the client gets at launch time.
-    if (auto* skin = APPLICATION->frendSkin(); skin && skin->hasSkin(name)) {
+    // Skipped entirely while the skin system is switched off.
+    if (auto* skin = FrendSkins::ENABLED ? APPLICATION->frendSkin() : nullptr; skin && skin->hasSkin(name)) {
         const QString payload = skin->userProperties(name, uuid);
         const auto doc = QJsonDocument::fromJson(payload.toUtf8());
         properties = doc.object().value("textures").toArray();

@@ -573,11 +573,6 @@ int CustomPage::memoryMb() const
     return ui->memorySpin->value();
 }
 
-bool CustomPage::useFrendsSkins() const
-{
-    return ui->frendsSkinsCheck->isChecked();
-}
-
 bool CustomPage::addOptiFine() const
 {
     return ui->optifineCheck->isChecked();

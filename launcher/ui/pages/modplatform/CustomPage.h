@@ -77,7 +77,6 @@ class CustomPage : public QWidget, public BasePage {
 
     bool useLauncherMemory() const;
     int memoryMb() const;
-    bool useFrendsSkins() const;
     bool addOptiFine() const;
 
    public slots:

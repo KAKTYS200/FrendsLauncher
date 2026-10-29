@@ -656,7 +656,7 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         // carries the latest version and the executable download URL.
         m_settings->registerSetting("FrendsLauncherUpdateUrl", QString());
         // Frend Skin: the launcher publishes the skins of its accounts locally.
-        m_settings->registerSetting("FrendSkinEnabled", true);
+        m_settings->registerSetting("FrendSkinEnabled", false);
         m_settings->registerSetting("FrendSkinPort", 0);
         m_settings->registerSetting("FrendSkinBindings", QString());
         // Offline session support: the local stand-in for Mojang's session server.
@@ -990,9 +990,13 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         qInfo() << "<> Instances loaded.";
     }
 
-    // Frend Skin: the local skin publisher for the accounts
-    m_frendSkin.reset(new FrendSkinServer(this));
-    initFrendSkin();
+    // Frend Skin: the local skin publisher for the accounts. The feature is
+    // switched off for now (see FrendSkins::ENABLED), so the server is not even
+    // constructed: no port is opened and no bindings file is read.
+    if (FrendSkins::ENABLED) {
+        m_frendSkin.reset(new FrendSkinServer(this));
+        initFrendSkin();
+    }
 
     // Local session server: lets offline accounts join LAN worlds and servers
     m_frendSession.reset(new FrendSessionServer(this));
@@ -1696,6 +1700,9 @@ void Application::ShowGlobalSettings(class QWidget* parent, QString open_page)
 
 void Application::initFrendSkin()
 {
+    if (!FrendSkins::ENABLED)
+        return;
+
     auto* server = frendSkin();
     if (!server || !settings()->get("FrendSkinEnabled").toBool())
         return;

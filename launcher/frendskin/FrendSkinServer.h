@@ -15,6 +15,19 @@
 
 class QTcpSocket;
 
+namespace FrendSkins {
+/**
+ * Master switch for the whole skin system.
+ *
+ * Off for now: the feature is turned off outright, not merely hidden in the
+ * UI. Nothing is published, nothing is seeded into the client cache and no
+ * "textures" property is handed to the game, so a bound skin cannot leak into
+ * a launch through some other path. Flip this to true to bring the feature
+ * back; the rest of the plumbing is untouched.
+ */
+inline constexpr bool ENABLED = false;
+}  // namespace FrendSkins
+
 /**
  * "Frend Skin": the launcher-side half of a skin system for offline accounts.
  *

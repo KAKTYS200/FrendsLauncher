@@ -86,5 +86,8 @@ class FrendsBottomBar : public QWidget {
     QProgressBar* m_downloadBar = nullptr;
     QLabel* m_downloadLabel = nullptr;
     QPushButton* m_downloadCancel = nullptr;
+    /// Holds the download strip. Hidden as a whole, so its margins do not keep
+    /// eating height when nothing is downloading.
+    QWidget* m_downloadStrip = nullptr;
     bool m_running = false;
 };

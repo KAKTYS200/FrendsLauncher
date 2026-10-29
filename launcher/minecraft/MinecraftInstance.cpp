@@ -1127,6 +1127,10 @@ bool MinecraftInstance::frendsSkinApplies(AuthSessionPtr session) const
 {
     if (!session)
         return false;
+    // The skin system is off at the source (see FrendSkins::ENABLED): no skin
+    // property, no cache seeding, no matter what the user's setting says.
+    if (!FrendSkins::ENABLED)
+        return false;
     // With the feature switched off the launcher does not hand anything to the
     // client: a bound skin is the user's choice, an enabled feature is the
     // user's switch.

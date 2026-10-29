@@ -330,27 +330,13 @@
               </widget>
              </item>
              <item row="2" column="0">
-              <widget class="QLabel" name="skinsLabel">
-               <property name="text">
-                <string>Скины</string>
-               </property>
-              </widget>
-             </item>
-             <item row="2" column="1">
-              <widget class="QCheckBox" name="frendsSkinsCheck">
-               <property name="text">
-                <string>Использовать систему скинов Frends Launcher</string>
-               </property>
-              </widget>
-             </item>
-             <item row="3" column="0">
               <widget class="QLabel" name="fpsLabel">
                <property name="text">
                 <string>Оптимизация</string>
                </property>
               </widget>
              </item>
-             <item row="3" column="1">
+             <item row="2" column="1">
               <widget class="QCheckBox" name="optifineCheck">
                <property name="text">
                 <string>Добавить OptiFine</string>
@@ -446,7 +432,6 @@
   <tabstop>loaderTypeCombo</tabstop>
   <tabstop>loaderVersionCombo</tabstop>
   <tabstop>useLauncherMemoryCheck</tabstop>
-  <tabstop>frendsSkinsCheck</tabstop>
   <tabstop>optifineCheck</tabstop>
   <tabstop>createButton</tabstop>
   <tabstop>cancelButton</tabstop>

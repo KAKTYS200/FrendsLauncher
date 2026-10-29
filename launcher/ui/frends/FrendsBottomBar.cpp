@@ -133,8 +133,10 @@ FrendsBottomBar::FrendsBottomBar(QWidget* parent) : QWidget(parent)
     outer->setContentsMargins(0, 0, 0, 0);
     outer->setSpacing(0);
 
-    auto* stripRow = new QHBoxLayout();
-    stripRow->setContentsMargins(FrendsScale::px(14, this), 0, FrendsScale::px(14, this), 0);
+    auto* stripRow = new QHBoxLayout(m_downloadStrip = new QWidget(this));
+    m_downloadStrip->hide();
+    stripRow->setContentsMargins(FrendsScale::px(14, this), FrendsScale::px(6, this), FrendsScale::px(14, this),
+                                 FrendsScale::px(2, this));
     stripRow->setSpacing(FrendsScale::px(8, this));
 
     m_downloadLabel = new QLabel(this);
@@ -153,7 +155,7 @@ FrendsBottomBar::FrendsBottomBar(QWidget* parent) : QWidget(parent)
     m_downloadCancel->hide();
     stripRow->addWidget(m_downloadCancel);
 
-    outer->addLayout(stripRow);
+    outer->addWidget(m_downloadStrip);
 
     auto* rowHost = new QWidget(this);
     m_layout = new QHBoxLayout(rowHost);
@@ -254,8 +256,11 @@ void FrendsBottomBar::showDownloadProgress(const QString& label)
     }
     if (m_downloadCancel)
         m_downloadCancel->show();
-    // Make room for the strip, otherwise the control row gets squashed.
-    setFixedHeight(FrendsScale::px(62, this) + qMax(6, FrendsScale::px(16, this)));
+    if (m_downloadStrip)
+        m_downloadStrip->show();
+    // Make room for the strip, otherwise the control row gets squashed. The
+    // strip now carries a thick bar plus its top/bottom margins.
+    setFixedHeight(FrendsScale::px(62, this) + qMax(10, FrendsScale::px(28, this)));
 }
 
 void FrendsBottomBar::setDownloadProgress(qint64 current, qint64 total)
@@ -280,6 +285,8 @@ void FrendsBottomBar::hideDownloadProgress()
         m_downloadBar->hide();
     if (m_downloadCancel)
         m_downloadCancel->hide();
+    if (m_downloadStrip)
+        m_downloadStrip->hide();
     setFixedHeight(FrendsScale::px(62, this));
 }
 
@@ -343,17 +350,18 @@ void FrendsBottomBar::styleWidgets(qreal scale)
             QStringLiteral("QPushButton { background: rgba(0, 0, 0, 70); color: #ffffff; border: 1px solid rgba(0, 0, 0, 50);"
                            " border-radius: 3px; font-size: %1px; padding: 2px 10px; }"
                            "QPushButton:hover { background: rgba(0, 0, 0, 110); }").arg(fontSize));
-        m_downloadCancel->setFixedHeight(qMax(6, FrendsScale::px(18, this)));
+        m_downloadCancel->setFixedHeight(qMax(10, FrendsScale::px(20, this)));
     }
     if (m_downloadBar) {
-        // The strip sits on the green panel, so it gets a dark track and the
-        // brand yellow as the fill.
+        // The strip sits on the green panel: a solid black track with the brand
+        // yellow fill. It used to be a 10px translucent sliver that was easy to
+        // miss, so the track is now black and nearly twice as thick.
         m_downloadBar->setStyleSheet(QStringLiteral(
-                                         "QProgressBar { background: rgba(0, 0, 0, 90); border: 1px solid rgba(0, 0, 0, 60);"
-                                         " border-radius: 3px; height: %1px; text-align: center; }"
-                                         "QProgressBar::chunk { background: #F9D900; border-radius: 2px; }")
-                                         .arg(qMax(6, FrendsScale::px(8, this))));
-        m_downloadBar->setFixedHeight(qMax(6, FrendsScale::px(10, this)));
+                                         "QProgressBar { background: #000000; border: 1px solid #000000;"
+                                         " border-radius: 4px; height: %1px; text-align: center; }"
+                                         "QProgressBar::chunk { background: #F9D900; border-radius: 3px; }")
+                                         .arg(qMax(10, FrendsScale::px(18, this))));
+        m_downloadBar->setFixedHeight(qMax(10, FrendsScale::px(18, this)));
     }
 
     if (m_addAccountButton) {
