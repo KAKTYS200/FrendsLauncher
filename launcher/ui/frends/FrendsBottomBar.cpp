@@ -148,6 +148,12 @@ FrendsBottomBar::FrendsBottomBar(QWidget* parent) : QWidget(parent)
     m_downloadBar->hide();
     stripRow->addWidget(m_downloadBar, 1);
 
+    m_downloadPercent = new QLabel(this);
+    m_downloadPercent->hide();
+    m_downloadPercent->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    // Width and font are set in styleWidgets(), where the scale is known.
+    stripRow->addWidget(m_downloadPercent);
+
     m_downloadCancel = new QPushButton(this);
     m_downloadCancel->setCursor(Qt::PointingHandCursor);
     m_downloadCancel->setFocusPolicy(Qt::NoFocus);
@@ -254,6 +260,12 @@ void FrendsBottomBar::showDownloadProgress(const QString& label)
             m_downloadBar->show();
         }
     }
+    if (m_downloadPercent) {
+        // A fresh task starts without a known percentage; the busy bar carries
+        // the message until the first progress() arrives.
+        m_downloadPercent->setText(QString());
+        m_downloadPercent->hide();
+    }
     if (m_downloadCancel)
         m_downloadCancel->show();
     if (m_downloadStrip)
@@ -272,8 +284,14 @@ void FrendsBottomBar::setDownloadProgress(qint64 current, qint64 total)
         const qint64 percent = qBound<qint64>(0, current * 100 / total, static_cast<qint64>(100));
         m_downloadBar->setRange(0, 100);
         m_downloadBar->setValue(int(percent));
+        if (m_downloadPercent) {
+            m_downloadPercent->setText(QStringLiteral("%1%").arg(percent));
+            m_downloadPercent->show();
+        }
     } else {
         m_downloadBar->setRange(0, 0);
+        if (m_downloadPercent)
+            m_downloadPercent->hide();
     }
 }
 
@@ -283,6 +301,8 @@ void FrendsBottomBar::hideDownloadProgress()
         m_downloadLabel->hide();
     if (m_downloadBar)
         m_downloadBar->hide();
+    if (m_downloadPercent)
+        m_downloadPercent->hide();
     if (m_downloadCancel)
         m_downloadCancel->hide();
     if (m_downloadStrip)
@@ -363,6 +383,16 @@ void FrendsBottomBar::styleWidgets(qreal scale)
                                          "QProgressBar::chunk { background: #F9D900; border-radius: 4px; }")
                                          .arg(barHeight));
         m_downloadBar->setFixedHeight(barHeight);
+    }
+    if (m_downloadPercent) {
+        // Bold plus a fixed width, so the label does not shove the bar around
+        // when the percentage goes from one digit to three.
+        QFont percentFont = m_downloadPercent->font();
+        percentFont.setBold(true);
+        m_downloadPercent->setFont(percentFont);
+        m_downloadPercent->setFixedWidth(qMax(34, FrendsScale::px(46, this)));
+        m_downloadPercent->setStyleSheet(
+            QStringLiteral("QLabel { color: #ffffff; font-size: %1px; background: transparent; }").arg(fontSize));
     }
 
     if (m_addAccountButton) {

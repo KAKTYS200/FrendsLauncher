@@ -239,10 +239,34 @@ void ConcurrentTask::subTaskProgress(Task::Ptr task, qint64 current, qint64 tota
     }
 }
 
+qint64 ConcurrentTask::aggregateProgress() const
+{
+    const auto total = totalSize();
+    if (total == 0)
+        return 0;
+
+    // Finished subtasks count as whole units.
+    double done = m_done.size() + m_failed.size() + m_succeeded.size();
+
+    // Running subtasks contribute their own fraction, but only when the subtask
+    // actually reports a total: a task that just says "0 / 0" would otherwise
+    // drag the batch backwards instead of showing it as not started.
+    for (auto it = m_doing.constBegin(); it != m_doing.constEnd(); ++it) {
+        auto progress = m_task_progress.value(it.value()->getUid());
+        if (!progress || progress->total <= 0)
+            continue;
+        const double fraction = double(qBound<qint64>(0, progress->current, progress->total)) / double(progress->total);
+        done += fraction;
+    }
+
+    const double ratio = qBound(0.0, done / double(total), 1.0);
+    return qint64(ratio * double(kProgressTotal));
+}
+
 void ConcurrentTask::updateState()
 {
     if (totalSize() > 1) {
-        setProgress(m_done.count(), totalSize());
+        setProgress(aggregateProgress(), kProgressTotal);
         setStatus(tr("Executing %1 task(s) (%2 out of %3 are done)")
                       .arg(QString::number(m_doing.count()), QString::number(m_done.count()), QString::number(totalSize())));
     } else {

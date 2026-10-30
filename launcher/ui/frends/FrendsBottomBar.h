@@ -85,6 +85,8 @@ class FrendsBottomBar : public QWidget {
     QToolButton* m_settingsButton = nullptr;
     QProgressBar* m_downloadBar = nullptr;
     QLabel* m_downloadLabel = nullptr;
+    /// "45%" next to the bar, so the exact figure is readable at a glance.
+    QLabel* m_downloadPercent = nullptr;
     QPushButton* m_downloadCancel = nullptr;
     /// Holds the download strip. Hidden as a whole, so its margins do not keep
     /// eating height when nothing is downloading.

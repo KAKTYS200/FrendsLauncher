@@ -90,6 +90,19 @@ class ConcurrentTask : public Task {
     // NOTE: This is not thread-safe.
     unsigned int totalSize() const { return static_cast<unsigned int>(m_queue.size() + m_doing.size() + m_done.size()); }
 
+    /// Total of the range progress() is reported in. Reporting a fixed 0..100
+    /// keeps every consumer (progress bar, percentage label) on the same scale
+    /// no matter how many subtasks there are.
+    static constexpr qint64 kProgressTotal = 100;
+
+    /// Weighted progress of the whole batch in the 0..kProgressTotal range.
+    ///
+    /// It used to be m_done.count() / totalSize(), which only moved once a
+    /// subtask finished: a five-step install showed 20%, 40%, ... and looked
+    /// stuck in between. Subtasks that are still running now contribute their
+    /// own fraction; queued ones contribute nothing.
+    qint64 aggregateProgress() const;
+
     virtual void updateState();
 
     void startSubTask(Task::Ptr task);
