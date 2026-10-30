@@ -35,7 +35,6 @@
  */
 
 #include "AccountListPage.h"
-#include "ui/dialogs/skins/SkinManageDialog.h"
 #include "ui_AccountListPage.h"
 
 #include <QItemSelectionModel>
@@ -216,9 +215,6 @@ void AccountListPage::updateButtonStates()
     }
     ui->actionRemove->setEnabled(accountIsReady);
     ui->actionSetDefault->setEnabled(accountIsReady);
-    // Offline accounts have no Microsoft token, so a skin cannot be uploaded
-    // for them, but the manager still lets the player keep and preview skins.
-    ui->actionManageSkins->setEnabled(accountIsReady);
     ui->actionRefresh->setEnabled(accountIsReady && accountIsOnline);
 
     if (m_accounts->defaultAccount().get() == nullptr) {
@@ -231,17 +227,6 @@ void AccountListPage::updateButtonStates()
     ui->actionMoveUp->setEnabled(accountCanMoveUp);
     ui->actionMoveDown->setEnabled(accountCanMoveDown);
     ui->listView->resizeColumnToContents(3);
-}
-
-void AccountListPage::on_actionManageSkins_triggered()
-{
-    QModelIndexList selection = ui->listView->selectionModel()->selectedIndexes();
-    if (selection.size() > 0) {
-        QModelIndex selected = selection.first();
-        MinecraftAccountPtr account = selected.data(AccountList::PointerRole).value<MinecraftAccountPtr>();
-        SkinManageDialog dialog(this, account);
-        dialog.exec();
-    }
 }
 
 void AccountListPage::on_actionMoveUp_triggered()

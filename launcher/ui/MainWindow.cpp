@@ -2061,11 +2061,6 @@ void MainWindow::on_actionViewCentralModsFolder_triggered()
     DesktopServices::openPath(APPLICATION->settings()->get("CentralModsDir").toString(), true);
 }
 
-void MainWindow::on_actionViewSkinsFolder_triggered()
-{
-    DesktopServices::openPath(APPLICATION->settings()->get("SkinsDir").toString(), true);
-}
-
 void MainWindow::on_actionViewIconThemeFolder_triggered()
 {
     DesktopServices::openPath(APPLICATION->themeManager()->getIconThemesFolder().path(), true);

@@ -296,7 +296,6 @@
     <addaction name="separator"/>
     <addaction name="actionViewInstanceFolder"/>
     <addaction name="actionViewCentralModsFolder"/>
-    <addaction name="actionViewSkinsFolder"/>
     <addaction name="actionViewJavaFolder"/>
     <addaction name="separator"/>
     <addaction name="actionViewIconThemeFolder"/>
@@ -659,17 +658,6 @@
    </property>
    <property name="toolTip">
     <string>Open the central mods folder in a file browser.</string>
-   </property>
-  </action>
-  <action name="actionViewSkinsFolder">
-   <property name="icon">
-    <iconset theme="viewfolder"/>
-   </property>
-   <property name="text">
-    <string>&amp;Skins</string>
-   </property>
-   <property name="toolTip">
-    <string>Open the skins folder in a file browser.</string>
    </property>
   </action>
   <action name="actionViewIconsFolder">

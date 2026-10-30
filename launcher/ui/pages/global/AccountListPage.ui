@@ -60,8 +60,6 @@
    <addaction name="actionNoDefault"/>
    <addaction name="actionMoveUp"/>
    <addaction name="actionMoveDown"/>
-   <addaction name="separator"/>
-   <addaction name="actionManageSkins"/>
   </widget>
   <action name="actionSetDefault">
    <property name="text">
@@ -74,14 +72,6 @@
    </property>
    <property name="text">
     <string>&amp;No Default</string>
-   </property>
-  </action>
-  <action name="actionManageSkins">
-   <property name="text">
-    <string>&amp;Manage Skins</string>
-   </property>
-   <property name="toolTip">
-    <string>Manage Skins</string>
    </property>
   </action>
   <action name="actionAddMicrosoft">

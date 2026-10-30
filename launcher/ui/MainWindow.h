@@ -127,8 +127,6 @@ class MainWindow : public QMainWindow {
     void on_actionViewLogsFolder_triggered();
     void on_actionViewJavaFolder_triggered();
 
-    void on_actionViewSkinsFolder_triggered();
-
     void on_actionViewSelectedInstFolder_triggered();
 
     void refreshInstances();

@@ -258,9 +258,9 @@ void FrendsBottomBar::showDownloadProgress(const QString& label)
         m_downloadCancel->show();
     if (m_downloadStrip)
         m_downloadStrip->show();
-    // Make room for the strip, otherwise the control row gets squashed. The
-    // strip now carries a thick bar plus its top/bottom margins.
-    setFixedHeight(FrendsScale::px(62, this) + qMax(10, FrendsScale::px(28, this)));
+    // Make room for the strip, otherwise the control row gets squashed: the
+    // strip itself is a 26px bar plus its top/bottom margins.
+    setFixedHeight(FrendsScale::px(62, this) + qMax(14, FrendsScale::px(26, this)) + FrendsScale::px(10, this));
 }
 
 void FrendsBottomBar::setDownloadProgress(qint64 current, qint64 total)
@@ -354,14 +354,15 @@ void FrendsBottomBar::styleWidgets(qreal scale)
     }
     if (m_downloadBar) {
         // The strip sits on the green panel: a solid black track with the brand
-        // yellow fill. It used to be a 10px translucent sliver that was easy to
-        // miss, so the track is now black and nearly twice as thick.
+        // yellow fill. It is the one thing the player watches during an install,
+        // so it gets real height instead of the hairline sliver it used to be.
+        const int barHeight = qMax(14, FrendsScale::px(26, this));
         m_downloadBar->setStyleSheet(QStringLiteral(
-                                         "QProgressBar { background: #000000; border: 1px solid #000000;"
-                                         " border-radius: 4px; height: %1px; text-align: center; }"
-                                         "QProgressBar::chunk { background: #F9D900; border-radius: 3px; }")
-                                         .arg(qMax(10, FrendsScale::px(18, this))));
-        m_downloadBar->setFixedHeight(qMax(10, FrendsScale::px(18, this)));
+                                         "QProgressBar { background: #000000; border: none;"
+                                         " border-radius: 5px; height: %1px; text-align: center; }"
+                                         "QProgressBar::chunk { background: #F9D900; border-radius: 4px; }")
+                                         .arg(barHeight));
+        m_downloadBar->setFixedHeight(barHeight);
     }
 
     if (m_addAccountButton) {
