@@ -313,8 +313,8 @@ FrendsCreatePage::FrendsCreatePage(QWidget* parent) : QWidget(parent)
     m_stack->addWidget(importPage);
     m_providerPage.push_back(importPage);
     importPage->setStyleSheet(platformPageStyle());
-    addProviderTile(tr("Из TLauncher"), tr("Импорт версии"), QColor(0x8E, 0x5B, 0xD9), false,
-                    QIcon(QStringLiteral(":/icons/multimc/32x32/instances/dirt_legacy.png")));
+    addProviderTile(tr("Из TLauncher"), tr("Импорт версии"), QColor(0x34, 0x9F, 0xCB), false,
+                    QIcon(QStringLiteral(":/frends/brands/tlauncher.png")));
 
     auto* separator = new QFrame(this);
     separator->setFrameShape(QFrame::HLine);

@@ -5,6 +5,7 @@
         <file>brands/curseforge.png</file>
         <file>brands/atlauncher.png</file>
         <file>brands/ftb.png</file>
+        <file>brands/tlauncher.png</file>
         <file>combo-arrow-down.svg</file>
     </qresource>
 </RCC>
