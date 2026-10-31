@@ -7,5 +7,7 @@
         <file>brands/ftb.png</file>
         <file>brands/tlauncher.png</file>
         <file>combo-arrow-down.svg</file>
+        <file>combo-arrow-down-light.svg</file>
+        <file>background.gif</file>
     </qresource>
 </RCC>

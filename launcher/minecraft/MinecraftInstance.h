@@ -151,6 +151,11 @@ class MinecraftInstance : public BaseInstance {
 
     QString getStatusbarDescription() override;
 
+    /// The Minecraft version this instance is built on ("1.20.1"). Returns an
+    /// empty string while the component list has not been loaded, so callers
+    /// that paint (the instance tiles) never trigger a reload on the paint path.
+    QString minecraftVersion() const;
+
     // FIXME: remove
     virtual QStringList getClassPath();
     // FIXME: remove

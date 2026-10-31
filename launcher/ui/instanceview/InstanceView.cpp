@@ -466,9 +466,9 @@ void InstanceView::paintEvent([[maybe_unused]] QPaintEvent* event)
 
     QPainter painter(this->viewport());
 
-    if (m_cat) {
-        m_cat->paint(&painter, this->viewport()->rect());
-    }
+    // The tiles sit on the translucent content card, so the CatPack artwork
+    // stays out of this view: it would show through the card and fight with
+    // the design. It still paints everywhere else the launcher uses it.
 
     QStyleOptionViewItem option;
     initViewItemOption(&option);

@@ -1166,6 +1166,11 @@ QStringList MinecraftInstance::getLogFileSearchPaths()
     return { FS::PathCombine(gameRoot(), "crash-reports"), FS::PathCombine(gameRoot(), "logs"), gameRoot() };
 }
 
+QString MinecraftInstance::minecraftVersion() const
+{
+    return m_components ? m_components->getComponentVersion(QStringLiteral("net.minecraft")) : QString();
+}
+
 QString MinecraftInstance::getStatusbarDescription()
 {
     QStringList traits;

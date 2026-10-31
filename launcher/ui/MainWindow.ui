@@ -58,21 +58,21 @@
            <number>0</number>
           </property>
           <property name="leftMargin">
-           <number>22</number>
+           <number>14</number>
           </property>
           <property name="topMargin">
-           <number>18</number>
+           <number>14</number>
           </property>
           <property name="rightMargin">
-           <number>22</number>
+           <number>10</number>
           </property>
           <property name="bottomMargin">
-           <number>16</number>
+           <number>12</number>
           </property>
           <item>
            <widget class="QWidget" name="contentCard">
             <property name="styleSheet">
-             <string notr="true">#contentCard { background-color: rgba(255, 255, 255, 242); border-radius: 4px; }</string>
+             <string notr="true">#contentCard { background-color: rgba(8, 10, 15, 88); border: 1px solid rgba(255, 255, 255, 85); border-radius: 12px; }</string>
             </property>
             <layout class="QVBoxLayout" name="contentLayout">
              <property name="spacing">

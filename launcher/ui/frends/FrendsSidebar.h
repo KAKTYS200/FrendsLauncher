@@ -21,8 +21,8 @@
 #include <QStringList>
 #include <QWidget>
 
+class FrendsNavButton;
 class QLabel;
-class QPushButton;
 class QSpacerItem;
 class QVBoxLayout;
 
@@ -49,29 +49,28 @@ class FrendsSidebar : public QWidget {
     void paintEvent(QPaintEvent* event) override;
 
    private:
-    QPushButton* addNavigationButton(const QString& page);
+    FrendsNavButton* addNavigationButton(const QString& page, const QString& icon);
     void setNavigationTexts();
-    QString navigationButtonStyle(qreal scale) const;
-    QString activeNavigationButtonStyle(qreal scale) const;
     void updateActivePageStyles();
 
     QVBoxLayout* m_layout = nullptr;
     QLabel* m_title = nullptr;
     QLabel* m_subtitle = nullptr;
     QLabel* m_version = nullptr;
+    QWidget* m_separator = nullptr;
     QSpacerItem* m_spacerTop = nullptr;
     QSpacerItem* m_spacerBottom = nullptr;
-    QList<QPushButton*> m_navButtons;
+    QList<FrendsNavButton*> m_navButtons;
     /// Page key each navigation button stands for, in the order they were added.
     QStringList m_navPages;
     QString m_activePage;
 
-    QPushButton* m_newsButton = nullptr;
-    QPushButton* m_instancesButton = nullptr;
-    QPushButton* m_addButton = nullptr;
-    QPushButton* m_serversButton = nullptr;
-    QPushButton* m_accountsButton = nullptr;
-    QPushButton* m_settingsButton = nullptr;
-    QPushButton* m_logsButton = nullptr;
-    QPushButton* m_aboutButton = nullptr;
+    FrendsNavButton* m_newsButton = nullptr;
+    FrendsNavButton* m_instancesButton = nullptr;
+    FrendsNavButton* m_addButton = nullptr;
+    FrendsNavButton* m_serversButton = nullptr;
+    FrendsNavButton* m_accountsButton = nullptr;
+    FrendsNavButton* m_settingsButton = nullptr;
+    FrendsNavButton* m_logsButton = nullptr;
+    FrendsNavButton* m_aboutButton = nullptr;
 };

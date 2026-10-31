@@ -19,6 +19,7 @@
 
 #include <QColor>
 #include <QLinearGradient>
+#include <QMovie>
 #include <QPainter>
 #include <QPainterPath>
 #include <QPixmap>
@@ -27,6 +28,8 @@
 #include <QResizeEvent>
 
 namespace {
+const QString kBackdropAnimation = QStringLiteral(":/frends/background.gif");
+
 struct Block {
     int x;
     int y;
@@ -68,6 +71,16 @@ void paintBlock(QPainter& painter, const Block& block, qreal depth)
 FrendsBackdrop::FrendsBackdrop(QWidget* parent) : QWidget(parent)
 {
     setAutoFillBackground(false);
+
+    // The looping cube animation is the backdrop. Frames are decoded on the fly
+    // instead of being cached, which would cost tens of megabytes for a three
+    // second loop.
+    m_movie = new QMovie(kBackdropAnimation, QByteArray(), this);
+    if (m_movie->isValid()) {
+        m_movie->setCacheMode(QMovie::CacheNone);
+        connect(m_movie, &QMovie::frameChanged, this, [this] { update(); });
+        m_movie->start();
+    }
 }
 
 void FrendsBackdrop::resizeEvent(QResizeEvent* event)
@@ -80,41 +93,84 @@ void FrendsBackdrop::paintEvent(QPaintEvent* event)
 {
     Q_UNUSED(event);
 
-    if (m_scene.size() != size()) {
-        m_scene = QPixmap(size());
-        m_scene.fill(Qt::transparent);
-        QPainter scenePainter(&m_scene);
-        scenePainter.setRenderHint(QPainter::Antialiasing, true);
-        paintScene(scenePainter);
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
+
+    bool painted = false;
+    if (m_movie && m_movie->isValid() && m_movie->state() == QMovie::Running) {
+        const QPixmap frame = m_movie->currentPixmap();
+        if (!frame.isNull()) {
+            // Cover the whole widget: the frame keeps its aspect ratio and the
+            // overflow is cropped evenly on both sides.
+            const QSize cover = frame.size().scaled(size(), Qt::KeepAspectRatioByExpanding);
+            QRect target(QPoint(0, 0), cover);
+            target.moveCenter(rect().center());
+            painter.drawPixmap(target, frame);
+            painted = true;
+        }
     }
 
-    QPainter painter(this);
-    painter.drawPixmap(0, 0, m_scene);
+    if (!painted) {
+        if (m_scene.size() != size()) {
+            // Fallback artwork: drawn small and blown back up, which turns the
+            // cubes into a soft out-of-focus backdrop.
+            const qreal shrink = 0.22;
+            const int w = qMax(24, int(width() * shrink));
+            const int h = qMax(24, int(height() * shrink));
+
+            QPixmap small(w, h);
+            small.fill(Qt::transparent);
+            {
+                QPainter scenePainter(&small);
+                scenePainter.setRenderHint(QPainter::Antialiasing, true);
+                paintScene(scenePainter, QRect(0, 0, w, h));
+            }
+
+            m_scene = small.scaled(size(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        }
+        painter.drawPixmap(0, 0, m_scene);
+    }
+
+    paintShade(painter);
 }
 
-void FrendsBackdrop::paintScene(QPainter& painter)
+void FrendsBackdrop::paintShade(QPainter& painter)
 {
     const QRect area = rect();
+
+    // A light hand: the animation is meant to be seen. The shade only pulls it
+    // down far enough for white text to stay readable on top of it.
+    painter.fillRect(area, QColor(6, 9, 14, 55));
+
+    QRadialGradient vignette(QPointF(area.width() * 0.5, area.height() * 0.42), area.width() * 0.80);
+    vignette.setColorAt(0.0, QColor(0, 0, 0, 0));
+    vignette.setColorAt(0.62, QColor(0, 0, 0, 30));
+    vignette.setColorAt(1.0, QColor(0, 0, 0, 120));
+    painter.fillRect(area, vignette);
+}
+
+void FrendsBackdrop::paintScene(QPainter& painter, const QRect& area)
+{
     if (area.isEmpty())
         return;
 
-    // Dark sky backdrop
     QLinearGradient sky(0, 0, 0, area.height());
-    sky.setColorAt(0.0, QColor(63, 106, 143));
-    sky.setColorAt(0.45, QColor(40, 77, 107));
-    sky.setColorAt(1.0, QColor(20, 42, 58));
+    sky.setColorAt(0.0, QColor(58, 40, 92));
+    sky.setColorAt(0.45, QColor(38, 26, 64));
+    sky.setColorAt(1.0, QColor(18, 12, 32));
     painter.fillRect(area, sky);
 
-    // Soft light spot in the upper-left corner
-    QRadialGradient glow(QPointF(area.width() * 0.28, area.height() * 0.12), area.width() * 0.55);
-    glow.setColorAt(0.0, QColor(255, 255, 255, 60));
+    QRadialGradient glow(QPointF(area.width() * 0.26, area.height() * 0.10), area.width() * 0.60);
+    glow.setColorAt(0.0, QColor(214, 150, 220, 70));
     glow.setColorAt(1.0, QColor(255, 255, 255, 0));
     painter.fillRect(area, glow);
 
-    const qreal unit = qMax(56.0, area.height() / 7.0);
+    // The artwork is drawn on the reduced canvas, so the block size is measured
+    // against that canvas - not against the window - or the cubes end up larger
+    // than the whole picture once it is scaled back up.
+    const qreal unit = qMax(4.0, area.height() / 6.5);
     const qreal depth = unit * 0.26;
 
-    // A fixed pseudo-random layout so the artwork stays stable between repaints
     static const struct {
         qreal x;
         qreal y;
@@ -131,13 +187,13 @@ void FrendsBackdrop::paintScene(QPainter& painter)
     };
 
     static const QColor tops[] = {
-        QColor(104, 170, 63), QColor(122, 84, 46), QColor(52, 62, 78), QColor(146, 140, 62), QColor(70, 120, 52),
+        QColor(126, 78, 168), QColor(196, 84, 132), QColor(88, 74, 140), QColor(232, 146, 120), QColor(108, 62, 140),
     };
     static const QColor lefts[] = {
-        QColor(72, 124, 44), QColor(86, 58, 32), QColor(34, 42, 55), QColor(104, 100, 44), QColor(48, 88, 36),
+        QColor(96, 56, 132), QColor(156, 62, 104), QColor(66, 54, 110), QColor(190, 108, 88), QColor(82, 44, 112),
     };
     static const QColor rights[] = {
-        QColor(54, 98, 34), QColor(66, 44, 24), QColor(25, 32, 43), QColor(82, 78, 34), QColor(38, 70, 28),
+        QColor(74, 42, 104), QColor(126, 48, 82), QColor(50, 40, 88), QColor(158, 86, 68), QColor(64, 34, 92),
     };
 
     painter.setRenderHint(QPainter::Antialiasing, true);
@@ -151,23 +207,10 @@ void FrendsBackdrop::paintScene(QPainter& painter)
         block.left = lefts[color];
         block.right = rights[color];
 
-        // Clip blocks that start outside the widget so the artwork fills the edges
         const int overflow = static_cast<int>(block.size + depth);
         if (block.x + overflow < -overflow || block.y + overflow < -overflow)
             continue;
 
         paintBlock(painter, block, depth);
-    }
-
-    // Subtle darkening towards the bottom keeps the white content card readable
-    QLinearGradient shade(0, area.height() * 0.55, 0, area.height());
-    shade.setColorAt(0.0, QColor(0, 0, 0, 0));
-    shade.setColorAt(1.0, QColor(0, 0, 0, 110));
-    painter.fillRect(area, shade);
-
-    // Faint diagonal streaks
-    painter.setPen(QPen(QColor(255, 255, 255, 12), 2));
-    for (int i = -area.height(); i < area.width(); i += 120) {
-        painter.drawLine(i, area.height(), i + area.height(), 0);
     }
 }

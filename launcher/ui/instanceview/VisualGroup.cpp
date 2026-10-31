@@ -141,73 +141,44 @@ VisualGroup::HitResults VisualGroup::hitScan(const QPoint& pos) const
 
 void VisualGroup::drawHeader(QPainter* painter, const QStyleOptionViewItem& option) const
 {
-    QRect optRect = option.rect;
-    optRect.setTop(optRect.top() + 7);
+    const QRect optRect = option.rect;
+
+    painter->save();
+    painter->setRenderHint(QPainter::Antialiasing, true);
+
     QFont font(QApplication::font());
+    font.setPixelSize(13);
     font.setBold(true);
-    const QFontMetrics fontMetrics = QFontMetrics(font);
     painter->setFont(font);
+    const QFontMetrics fontMetrics(font);
 
-    QPen pen;
-    pen.setWidth(2);
-    QColor penColor = option.palette.text().color();
-    penColor.setAlphaF(0.6f);
-    pen.setColor(penColor);
-    painter->setPen(pen);
-    painter->setRenderHint(QPainter::Antialiasing);
-
-    // sizes and offsets, to keep things consistent below
-    const int arrowOffsetLeft = fontMetrics.height() / 2 + 7;
-    const int textOffsetLeft = arrowOffsetLeft * 2;
-    const int centerHeight = optRect.top() + fontMetrics.height() / 2;
     const QString& textToDraw = text.isEmpty() ? QObject::tr("Ungrouped") : text;
+    // `option.rect` covers the whole group, header and tiles, so the header is
+    // laid out inside its own strip at the top rather than centred in the lot.
+    const int centerY = optRect.top() + headerHeight() / 2;
+    const int arrowLeft = optRect.left() + 10;
+    constexpr int arrowSize = 4;
 
-    // BEGIN: arrow
-    {
-        constexpr int arrowSize = 6;
-        QPolygon arrowPolygon;
-        if (collapsed) {
-            arrowPolygon << QPoint(arrowOffsetLeft - arrowSize / 2, centerHeight - arrowSize)
-                         << QPoint(arrowOffsetLeft + arrowSize / 2, centerHeight)
-                         << QPoint(arrowOffsetLeft - arrowSize / 2, centerHeight + arrowSize);
-            painter->drawPolyline(arrowPolygon);
-        } else {
-            arrowPolygon << QPoint(arrowOffsetLeft - arrowSize, centerHeight - arrowSize / 2)
-                         << QPoint(arrowOffsetLeft, centerHeight + arrowSize / 2)
-                         << QPoint(arrowOffsetLeft + arrowSize, centerHeight - arrowSize / 2);
-            painter->drawPolyline(arrowPolygon);
-        }
+    // Chevron: points down when the group is open, right when it is collapsed.
+    painter->setPen(QPen(QColor(226, 228, 232, 210), 1.8, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+    QPolygon arrow;
+    if (collapsed) {
+        arrow << QPoint(arrowLeft - arrowSize, centerY - arrowSize) << QPoint(arrowLeft + arrowSize / 2, centerY)
+              << QPoint(arrowLeft - arrowSize, centerY + arrowSize);
+    } else {
+        arrow << QPoint(arrowLeft - arrowSize, centerY - arrowSize / 2) << QPoint(arrowLeft, centerY + arrowSize / 2)
+              << QPoint(arrowLeft + arrowSize, centerY - arrowSize / 2);
     }
-    // END: arrow
+    painter->drawPolyline(arrow);
 
-    // BEGIN: text
-    {
-        QRect textRect(optRect);
-        textRect.setTop(textRect.top());
-        textRect.setLeft(textOffsetLeft);
-        textRect.setHeight(fontMetrics.height());
-        textRect.setRight(textRect.right() - 7);
+    painter->setPen(QColor(0xEE, 0xEF, 0xF2));
+    QRect textRect(optRect);
+    textRect.setLeft(arrowLeft + 14);
+    textRect.setHeight(fontMetrics.height());
+    textRect.moveTop(centerY - fontMetrics.height() / 2);
+    painter->drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter, textToDraw);
 
-        painter->drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter, textToDraw);
-    }
-    // END: text
-
-    // BEGIN: horizontal line
-    {
-        penColor.setAlphaF(0.05f);
-        pen.setColor(penColor);
-        painter->setPen(pen);
-        // startPoint is left + arrow + text + space
-        const int startPoint =
-            optRect.left() + fontMetrics.height() + fontMetrics.size(Qt::AlignLeft | Qt::AlignVCenter, textToDraw).width() + 20;
-        painter->setRenderHint(QPainter::Antialiasing, false);
-        QPolygon polygon;
-        // for some reason the height (yPos) doesn't look centered, so we are adding 1 to the center height
-        const int lineHeight = centerHeight + 1;
-        polygon << QPoint(startPoint, lineHeight) << QPoint(optRect.right() - 3, lineHeight);
-        painter->drawPolyline(polygon);
-    }
-    // END: horizontal line
+    painter->restore();
 }
 
 int VisualGroup::totalHeight() const
@@ -218,19 +189,12 @@ int VisualGroup::totalHeight() const
 int VisualGroup::headerHeight()
 {
     QFont font(QApplication::font());
+    font.setPixelSize(13);
     font.setBold(true);
     QFontMetrics fontMetrics(font);
 
-    const int height = fontMetrics.height() + 1 /* 1 pixel-width gradient */
-                       + 11 /* top and bottom separation */;
-    return height;
-    /*
-    int raw = view->viewport()->fontMetrics().height() + 4;
-    // add english. maybe. depends on font height.
-    if (raw % 2 == 0)
-        raw++;
-    return std::min(raw, 25);
-    */
+    // Room for the chevron and a little breathing space above the first row.
+    return fontMetrics.height() + 14;
 }
 
 int VisualGroup::contentHeight() const

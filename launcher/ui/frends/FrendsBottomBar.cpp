@@ -71,33 +71,35 @@ QString comboStyle(qreal scale)
 {
     return QStringLiteral(
                "QComboBox {"
-               "  background: #ffffff;"
-               "  color: #2b2b2b;"
-               "  border: none;"
-               "  border-radius: 2px;"
+               "  background: #1B1F27;"
+               "  color: #E7E8EC;"
+               "  border: 1px solid rgba(255, 255, 255, 32);"
+               "  border-radius: %8px;"
                "  padding: %1px %2px;"
                "  min-height: %3px;"
                "  font-size: %4px;"
                "}"
+               "QComboBox:hover { border: 1px solid rgba(255, 255, 255, 70); }"
                "QComboBox::drop-down {"
                "  width: %5px;"
                "  border: none;"
-               "  background: #e9e9e9;"
+               "  background: transparent;"
                "}"
                // Styling drop-down drops the native indicator, so the arrow has
                // to be drawn back in - otherwise the field ends in a blank grey
                // block. A real image is used because the CSS border-triangle
                // trick does not apply to QSS sub-controls.
                "QComboBox::down-arrow {"
-               "  image: url(:/frends/combo-arrow-down.svg);"
+               "  image: url(:/frends/combo-arrow-down-light.svg);"
                "  width: %6px;"
                "  height: %7px;"
                "}"
                "QComboBox QAbstractItemView {"
-               "  background: #ffffff;"
-               "  color: #2b2b2b;"
-               "  selection-background-color: #d9edc4;"
-               "  selection-color: #2b2b2b;"
+               "  background: #1B1F27;"
+               "  color: #E7E8EC;"
+               "  border: 1px solid rgba(255, 255, 255, 40);"
+               "  selection-background-color: #F9D900;"
+               "  selection-color: #3B2C00;"
                "  outline: none;"
                "}")
         .arg(qRound(4 * scale))
@@ -106,19 +108,25 @@ QString comboStyle(qreal scale)
         .arg(qMax(9, int(qRound(12 * scale))))
         .arg(qRound(22 * scale))
         .arg(qMax(8, int(qRound(10 * scale))))
-        .arg(qMax(5, int(qRound(6 * scale))));
+        .arg(qMax(5, int(qRound(6 * scale))))
+        .arg(qMax(4, int(qRound(6 * scale))));
 }
 
-QString iconButtonStyle()
+QString iconButtonStyle(qreal scale)
 {
+    // Square, slightly raised plates: on the dark bar a bare glyph floats away
+    // from the row, the plate gives it the same weight as the play button.
     return QStringLiteral(
-        "QToolButton {"
-        "  background: transparent;"
-        "  border: none;"
-        "  padding: 2px;"
-        "}"
-        "QToolButton:hover { background: rgba(255, 255, 255, 40); border-radius: 4px; }"
-        "QToolButton:pressed { background: rgba(0, 0, 0, 30); border-radius: 4px; }");
+               "QToolButton {"
+               "  background: rgba(255, 255, 255, 16);"
+               "  border: 1px solid rgba(255, 255, 255, 38);"
+               "  border-radius: %1px;"
+               "  padding: %2px;"
+               "}"
+               "QToolButton:hover { background: rgba(255, 255, 255, 38); border: 1px solid rgba(255, 255, 255, 80); }"
+               "QToolButton:pressed { background: rgba(255, 255, 255, 10); }")
+        .arg(qMax(4, int(qRound(6 * scale))))
+        .arg(qMax(2, int(qRound(5 * scale))));
 }
 }  // namespace
 
@@ -220,7 +228,6 @@ FrendsBottomBar::FrendsBottomBar(QWidget* parent) : QWidget(parent)
         auto* button = new QToolButton(this);
         button->setIcon(themedIcon(name, fallback));
         button->setCursor(Qt::PointingHandCursor);
-        button->setStyleSheet(iconButtonStyle());
         // These buttons carry only a glyph, so nothing sets their text and a
         // screen reader (or UI automation) would see four nameless buttons.
         // The name is filled in by retranslate().
@@ -346,14 +353,17 @@ void FrendsBottomBar::applyScale()
     m_playButton->setMinimumSize(playSize);
     m_playButton->setMaximumHeight(playSize.height());
 
-    m_modsButton->setFixedWidth(FrendsScale::px(56, this));
+    m_modsButton->setFixedWidth(FrendsScale::px(76, this));
     m_modsButton->setMinimumHeight(FrendsScale::px(42, this));
 
     const QSize iconSize(FrendsScale::px(22, this), FrendsScale::px(22, this));
     // m_launcherUpdateButton used to be left out here, so its icon kept the
     // style default and came out visibly bigger than its neighbours'.
-    for (auto* button : { m_refreshButton, m_launcherUpdateButton, m_folderButton, m_settingsButton })
+    const int iconButtonSide = FrendsScale::px(36, this);
+    for (auto* button : { m_refreshButton, m_launcherUpdateButton, m_folderButton, m_settingsButton }) {
         button->setIconSize(iconSize);
+        button->setFixedSize(iconButtonSide, iconButtonSide);
+    }
 }
 
 void FrendsBottomBar::styleWidgets(qreal scale)
@@ -378,7 +388,7 @@ void FrendsBottomBar::styleWidgets(qreal scale)
         // so it gets real height instead of the hairline sliver it used to be.
         const int barHeight = qMax(14, FrendsScale::px(26, this));
         m_downloadBar->setStyleSheet(QStringLiteral(
-                                         "QProgressBar { background: #000000; border: none;"
+                                         "QProgressBar { background: rgba(255, 255, 255, 28); border: none;"
                                          " border-radius: 5px; height: %1px; text-align: center; }"
                                          "QProgressBar::chunk { background: #F9D900; border-radius: 4px; }")
                                          .arg(barHeight));
@@ -396,15 +406,16 @@ void FrendsBottomBar::styleWidgets(qreal scale)
     }
 
     if (m_addAccountButton) {
-        const int side = qMax(18, FrendsScale::px(24, this));
+        const int side = qMax(18, FrendsScale::px(30, this));
         m_addAccountButton->setFixedSize(side, side);
         m_addAccountButton->setStyleSheet(
-            QStringLiteral("QToolButton { background: rgba(255, 255, 255, 60); color: #ffffff;"
-                           " border: 1px solid rgba(255, 255, 255, 110); border-radius: 5px;"
+            QStringLiteral("QToolButton { background: #1B1F27; color: #E7E8EC;"
+                           " border: 1px solid rgba(255, 255, 255, 38); border-radius: %2px;"
                            " font-size: %1px; font-weight: 700; padding: 0px; }"
-                           "QToolButton:hover { background: rgba(255, 255, 255, 120); }"
-                           "QToolButton:pressed { background: rgba(0, 0, 0, 40); }")
-                .arg(qMax(12, FrendsScale::px(17, this))));
+                           "QToolButton:hover { background: #262B35; border: 1px solid rgba(255, 255, 255, 80); }"
+                           "QToolButton:pressed { background: #14171D; }")
+                .arg(qMax(12, FrendsScale::px(17, this)))
+                .arg(qMax(4, int(qRound(6 * scale)))));
         m_addAccountButton->setToolTip(tr("Добавить аккаунт"));
     }
     m_accountCombo->setStyleSheet(comboStyle(scale));
@@ -412,41 +423,49 @@ void FrendsBottomBar::styleWidgets(qreal scale)
 
     const int indicator = qMax(10, int(qRound(14 * scale)));
     m_updateCheck->setStyleSheet(QStringLiteral(
-                                     "QCheckBox { color: #ffffff; font-size: %1px; spacing: %2px; background: transparent; }"
-                                     "QCheckBox::indicator { width: %3px; height: %3px; border: 1px solid #ffffff;"
-                                     " background: #ffffff; border-radius: 1px; }"
-                                     "QCheckBox::indicator:checked { background: #F9D900; border: 1px solid #C9B400; }")
+                                     "QCheckBox { color: #DCDDE1; font-size: %1px; spacing: %2px; background: transparent; }"
+                                     "QCheckBox::indicator { width: %3px; height: %3px; border: 1px solid rgba(255, 255, 255, 90);"
+                                     " background: #1B1F27; border-radius: 3px; }"
+                                     "QCheckBox::indicator:checked { background: #F9D900; border: 1px solid #F9D900; }")
                                      .arg(qMax(8, fontSize - 1))
                                      .arg(qRound(6 * scale))
                                      .arg(indicator));
 
+    // The one button the whole launcher exists for, so it carries the warm
+    // accent instead of the flat plate the others use.
     m_playButton->setStyleSheet(QStringLiteral(
                                     "QPushButton {"
-                                    "  background: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 #ffd25a, stop:1 #f2b32c);"
+                                    "  background: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 #FFB347, stop:1 #F07C1E);"
                                     "  color: #ffffff;"
-                                    "  border: none;"
-                                    "  border-radius: 4px;"
+                                    "  border: 1px solid rgba(255, 255, 255, 60);"
+                                    "  border-radius: %2px;"
                                     "  font-size: %1px;"
                                     "  font-weight: 700;"
                                     "}"
-                                    "QPushButton:hover { background: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 #ffdd7a, "
-                                    "stop:1 #f7bf3f); }"
-                                    "QPushButton:pressed { background: #e3a522; }"
-                                    "QPushButton:disabled { background: #c9c9c9; color: #f0f0f0; }")
-                                    .arg(qMax(10, int(qRound(15 * scale)))));
+                                    "QPushButton:hover { background: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 #FFC066, "
+                                    "stop:1 #FA8B2A); }"
+                                    "QPushButton:pressed { background: #DC6C14; }"
+                                    "QPushButton:disabled { background: #3A3F49; color: #8A8F98; border: 1px solid rgba(255, 255, 255, 20); }")
+                                    .arg(qMax(10, int(qRound(15 * scale))))
+                                    .arg(qMax(4, int(qRound(7 * scale)))));
 
     m_modsButton->setStyleSheet(QStringLiteral(
                                     "QPushButton {"
-                                    "  background: transparent;"
-                                    "  border: none;"
-                                    "  color: #ffffff;"
+                                    "  background: rgba(255, 255, 255, 14);"
+                                    "  border: 1px solid rgba(255, 255, 255, 45);"
+                                    "  border-radius: %2px;"
+                                    "  color: #EDEEF1;"
                                     "  font-size: %1px;"
-                                    "  font-weight: 800;"
-                                    "  letter-spacing: 0.5px;"
+                                    "  font-weight: 700;"
+                                    "  letter-spacing: 0.3px;"
                                     "}"
-                                    "QPushButton:hover { background: rgba(255, 255, 255, 35); border-radius: 4px; }"
-                                    "QPushButton:pressed { background: rgba(0, 0, 0, 30); border-radius: 4px; }")
-                                    .arg(qMax(8, int(qRound(11 * scale)))));
+                                    "QPushButton:hover { background: rgba(255, 255, 255, 32); border: 1px solid rgba(255, 255, 255, 90); }"
+                                    "QPushButton:pressed { background: rgba(255, 255, 255, 8); }")
+                                    .arg(qMax(8, int(qRound(10 * scale))))
+                                    .arg(qMax(4, int(qRound(7 * scale)))));
+
+    for (auto* button : { m_refreshButton, m_launcherUpdateButton, m_folderButton, m_settingsButton })
+        button->setStyleSheet(iconButtonStyle(scale));
 }
 
 void FrendsBottomBar::retranslate()
@@ -495,10 +514,10 @@ void FrendsBottomBar::paintEvent(QPaintEvent* event)
 
     QPainter painter(this);
     QLinearGradient gradient(0, 0, 0, height());
-    gradient.setColorAt(0.0, QColor(122, 191, 84));
-    gradient.setColorAt(0.5, QColor(96, 165, 62));
-    gradient.setColorAt(1.0, QColor(74, 138, 45));
+    gradient.setColorAt(0.0, QColor(14, 17, 23, 244));
+    gradient.setColorAt(1.0, QColor(8, 10, 14, 248));
     painter.fillRect(rect(), gradient);
 
-    painter.fillRect(QRect(0, 0, width(), 1), QColor(255, 255, 255, 60));
+    // Hairline on top: the bar is a separate surface from the content above it.
+    painter.fillRect(QRect(0, 0, width(), 1), QColor(255, 255, 255, 32));
 }

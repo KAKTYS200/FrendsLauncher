@@ -20,9 +20,13 @@
 #include <QPixmap>
 #include <QWidget>
 
+class QMovie;
 class QPaintEvent;
 class QPainter;
 
+/// The window backdrop: a looping animation of drifting Minecraft cubes.
+/// If the animation cannot be loaded the widget falls back to drawing the
+/// cubes itself, so the launcher never ends up with a plain black background.
 class FrendsBackdrop : public QWidget {
     Q_OBJECT
 
@@ -34,6 +38,11 @@ class FrendsBackdrop : public QWidget {
     void resizeEvent(QResizeEvent* event) override;
 
    private:
-    void paintScene(QPainter& painter);
+    void paintAnimation(QPainter& painter);
+    /// Drawn block artwork, used when the animation is unavailable.
+    void paintScene(QPainter& painter, const QRect& area);
+    void paintShade(QPainter& painter);
+
+    QMovie* m_movie = nullptr;
     QPixmap m_scene;
 };

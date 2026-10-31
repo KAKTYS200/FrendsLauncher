@@ -723,7 +723,8 @@ void MainWindow::setupFrendsUi()
     ui->instanceToolBar->setVisible(false);
     ui->statusBar->setVisible(false);
 
-    view->setStyleSheet(QStringLiteral("QTreeView { background: transparent; border: none; color: #2b2b2b; }"));
+    view->setStyleSheet(QStringLiteral("QTreeView { background: transparent; border: none; color: #E7E8EC;"
+                                       " selection-background-color: transparent; selection-color: #E7E8EC; }"));
     view->viewport()->setAutoFillBackground(false);
     // The stock overlay says "Add Instance"; the Frends chrome calls it "Создать сборку".
     view->setEmptyStateText(tr("Добро пожаловать!") + "\n" + tr("Нажмите «Создать сборку», чтобы начать."));
