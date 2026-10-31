@@ -50,7 +50,11 @@ void SequentialTask::subTaskFailed(Task::Ptr task, const QString& msg)
 void SequentialTask::updateState()
 {
     // Same 0..100 scale as ConcurrentTask: the running step contributes its own
-    // fraction instead of the bar jumping once per finished step.
-    setProgress(aggregateProgress(), kProgressTotal);
-    setStatus(tr("Executing task %1 out of %2").arg(QString::number(m_doing.count() + m_done.count()), QString::number(totalSize())));
+    // fraction instead of the bar jumping once per finished step. The step
+    // number stays, the "out of N" total goes: the percentage already says how
+    // far along the batch is.
+    const auto percent = aggregateProgress();
+    setProgress(percent, kProgressTotal);
+    setStatus(tr("Executing task %1 (%2%)")
+                  .arg(QString::number(m_doing.count() + m_done.count()), QString::number(percent)));
 }

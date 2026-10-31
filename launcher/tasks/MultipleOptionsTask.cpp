@@ -56,6 +56,8 @@ void MultipleOptionsTask::executeNextSubTask()
 
 void MultipleOptionsTask::updateState()
 {
-    setProgress(m_done.count(), totalSize());
-    setStatus(tr("Attempting task %1 out of %2").arg(QString::number(m_doing.count() + m_done.count()), QString::number(totalSize())));
+    // 0..100, like every other batch task.
+    const auto percent = aggregateProgress();
+    setProgress(percent, kProgressTotal);
+    setStatus(tr("Attempting task (%1%)").arg(QString::number(percent)));
 }

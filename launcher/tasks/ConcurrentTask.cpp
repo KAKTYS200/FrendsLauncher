@@ -269,9 +269,11 @@ qint64 ConcurrentTask::aggregateProgress() const
 void ConcurrentTask::updateState()
 {
     if (totalSize() > 1) {
-        setProgress(aggregateProgress(), kProgressTotal);
-        setStatus(tr("Executing %1 task(s) (%2 out of %3 are done)")
-                      .arg(QString::number(m_doing.count()), QString::number(m_done.count()), QString::number(totalSize())));
+        // The percentage is the number that matters; a bare "3 out of 5" made
+        // the strip look like it was counting steps instead of showing progress.
+        const auto percent = aggregateProgress();
+        setProgress(percent, kProgressTotal);
+        setStatus(tr("Executing %1 task(s) (%2%)").arg(QString::number(m_doing.count()), QString::number(percent)));
     } else {
         QString status = tr("Please wait...");
         if (m_queue.size() > 0) {
