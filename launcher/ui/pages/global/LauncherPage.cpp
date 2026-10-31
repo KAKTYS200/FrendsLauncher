@@ -50,6 +50,7 @@
 #include "BuildConfig.h"
 #include "DesktopServices.h"
 #include "settings/SettingsObject.h"
+#include "ui/frends/FrendsBackdrop.h"
 #include "ui/frends/FrendsDiagnostics.h"
 #include "ui/frends/FrendsScale.h"
 #include "ui/themes/ITheme.h"
@@ -208,6 +209,9 @@ void LauncherPage::applySettings()
     // Frends theme scale (percent)
     s->set("FrendsUiScale", ui->uiScaleSlider->value());
 
+    // Which background animation the main window plays.
+    s->set("FrendsBackdrop", ui->backdropCombo->currentData().toString());
+
     // Privacy: local-only launch counter.
     s->set("FrendsLocalStatistics", ui->privacyLocalStatsCheckBox->isChecked());
 
@@ -271,6 +275,17 @@ void LauncherPage::loadSettings()
     s->getOrRegisterSetting("FrendsUiScale", FrendsScale::DEFAULT_USER_PERCENT);
     ui->uiScaleSlider->setValue(s->get("FrendsUiScale").toInt());
     ui->uiScaleValueLabel->setText(QStringLiteral("%1%").arg(ui->uiScaleSlider->value()));
+
+    // Background animation: the items carry the setting value as their data, so
+    // saving is a straight copy back.
+    s->getOrRegisterSetting("FrendsBackdrop", FrendsBackdrop::settingValue(FrendsBackdrop::Orbit));
+    const QString backdrop = s->get("FrendsBackdrop").toString();
+    ui->backdropCombo->clear();
+    for (auto mode : { FrendsBackdrop::Orbit, FrendsBackdrop::Rain }) {
+        ui->backdropCombo->addItem(FrendsBackdrop::settingLabel(mode), FrendsBackdrop::settingValue(mode));
+        if (FrendsBackdrop::settingValue(mode) == backdrop)
+            ui->backdropCombo->setCurrentIndex(ui->backdropCombo->count() - 1);
+    }
 
     ui->numberOfConcurrentTasksSpinBox->setValue(s->get("NumberOfConcurrentTasks").toInt());
     ui->numberOfConcurrentDownloadsSpinBox->setValue(s->get("NumberOfConcurrentDownloads").toInt());

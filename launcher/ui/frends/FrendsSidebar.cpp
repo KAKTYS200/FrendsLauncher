@@ -29,6 +29,7 @@
 #include <QVBoxLayout>
 
 #include "BuildConfig.h"
+#include "FrendsPalette.h"
 #include "FrendsScale.h"
 
 namespace {
@@ -221,6 +222,8 @@ class FrendsNavButton : public QPushButton {
     {
         Q_UNUSED(event);
 
+        const auto& theme = FrendsTheme::colors();
+
         QPainter p(this);
         p.setRenderHint(QPainter::Antialiasing, true);
 
@@ -230,15 +233,19 @@ class FrendsNavButton : public QPushButton {
             // Warm gradient plate with a soft halo, the same shape the design
             // uses to mark the page you are on.
             QLinearGradient glow(plate.topLeft(), plate.bottomLeft());
-            glow.setColorAt(0.0, QColor(255, 219, 80, 70));
-            glow.setColorAt(1.0, QColor(255, 170, 20, 0));
+            QColor halo = theme.navActiveTop;
+            halo.setAlpha(70);
+            QColor haloEnd = theme.navActiveTop;
+            haloEnd.setAlpha(0);
+            glow.setColorAt(0.0, halo);
+            glow.setColorAt(1.0, haloEnd);
             p.setPen(Qt::NoPen);
             p.setBrush(glow);
             p.drawRoundedRect(plate.adjusted(-1, -2, 1, 2), m_radius + 2, m_radius + 2);
 
             QLinearGradient fill(plate.topLeft(), plate.bottomLeft());
-            fill.setColorAt(0.0, QColor(0xFF, 0xD9, 0x4A));
-            fill.setColorAt(1.0, QColor(0xF2, 0xAF, 0x17));
+            fill.setColorAt(0.0, theme.navActiveTop);
+            fill.setColorAt(1.0, theme.navActiveBottom);
             p.setBrush(fill);
             p.drawRoundedRect(plate, m_radius, m_radius);
 
@@ -247,7 +254,7 @@ class FrendsNavButton : public QPushButton {
             p.drawRoundedRect(plate.adjusted(0.5, 0.5, -0.5, -0.5), m_radius, m_radius);
         } else if (m_hover) {
             p.setPen(Qt::NoPen);
-            p.setBrush(QColor(255, 255, 255, 20));
+            p.setBrush(theme.navHover);
             p.drawRoundedRect(plate, m_radius, m_radius);
         }
 
@@ -257,7 +264,7 @@ class FrendsNavButton : public QPushButton {
         }
 
         p.setFont(font());
-        p.setPen(m_active ? QColor(0x3B, 0x2C, 0x00) : QColor(0xE7, 0xE8, 0xEA));
+        p.setPen(m_active ? theme.textOnAccent : theme.text);
         const QRect textRect(m_textLeft, 0, width() - m_textLeft - FrendsScale::px(6, this), height());
         const QString label = fontMetrics().elidedText(text(), Qt::ElideRight, textRect.width());
         p.drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter, label);
@@ -281,7 +288,8 @@ class FrendsNavButton : public QPushButton {
     void refreshIcon()
     {
         // The plate is light, so the glyph on it has to flip to a dark tone.
-        const QColor tone = m_active ? QColor(0x3B, 0x2C, 0x00) : QColor(0xEC, 0xED, 0xEF);
+        const auto& theme = FrendsTheme::colors();
+        const QColor tone = m_active ? theme.textOnAccent : theme.text;
         m_pixmap = drawNavIcon(m_icon, qMax(10, m_iconSize), tone);
     }
 
@@ -339,6 +347,8 @@ FrendsSidebar::FrendsSidebar(QWidget* parent) : QWidget(parent)
 
 void FrendsSidebar::applyScale()
 {
+    const auto& theme = FrendsTheme::colors();
+
     setFixedWidth(FrendsScale::px(190, this));
     m_layout->setContentsMargins(FrendsScale::px(12, this), FrendsScale::px(16, this), FrendsScale::px(12, this),
                                  FrendsScale::px(12, this));
@@ -346,19 +356,23 @@ void FrendsSidebar::applyScale()
 
     if (m_title) {
         m_title->setStyleSheet(QStringLiteral(
-                                   "color: #ffffff; font-size: %1px; font-weight: 800; letter-spacing: 0.6px; background: transparent;")
+                                   "color: %1; font-size: %2px; font-weight: 800; letter-spacing: 0.6px; background: transparent;")
+                                   .arg(theme.text.name())
                                    .arg(FrendsScale::px(15, this)));
     }
     if (m_subtitle) {
-        m_subtitle->setStyleSheet(QStringLiteral(
-                                      "color: rgba(255, 255, 255, 150); font-size: %1px; font-weight: 600; letter-spacing: 1.8px; "
-                                      "background: transparent;")
-                                      .arg(FrendsScale::px(8, this)));
+        m_subtitle->setStyleSheet(
+            QStringLiteral("color: %1; font-size: %2px; font-weight: 600; letter-spacing: 1.8px; background: transparent;")
+                .arg(FrendsTheme::css(theme.textMuted))
+                .arg(FrendsScale::px(8, this)));
     }
     if (m_version) {
-        m_version->setStyleSheet(QStringLiteral("color: rgba(255, 255, 255, 135); font-size: %1px; background: transparent;")
+        m_version->setStyleSheet(QStringLiteral("color: %1; font-size: %2px; background: transparent;")
+                                     .arg(FrendsTheme::css(theme.textMuted))
                                      .arg(FrendsScale::px(9, this)));
     }
+    if (m_separator)
+        m_separator->setStyleSheet(QStringLiteral("background: %1;").arg(FrendsTheme::css(theme.panelEdge)));
 
     for (auto* button : m_navButtons)
         button->applyMetrics(FrendsScale::factor(this));
@@ -429,17 +443,28 @@ void FrendsSidebar::paintEvent(QPaintEvent* event)
 {
     Q_UNUSED(event);
 
+    const auto& theme = FrendsTheme::colors();
+
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing, true);
 
-    // Near-black plate with a barely-there lift at the top, so the panel reads
-    // as a surface rather than a flat block of colour.
+    // Panel plate with a barely-there lift at the top, so it reads as a surface
+    // rather than a flat block of colour.
     QLinearGradient gradient(0, 0, 0, height());
-    gradient.setColorAt(0.0, QColor(16, 19, 25, 232));
-    gradient.setColorAt(0.55, QColor(11, 13, 18, 226));
-    gradient.setColorAt(1.0, QColor(8, 10, 14, 220));
+    gradient.setColorAt(0.0, theme.panelTop);
+    gradient.setColorAt(1.0, theme.panelBottom);
     painter.fillRect(rect(), gradient);
 
     // Hairline on the inner edge separates it from the content card.
-    painter.fillRect(QRect(0, 0, 1, height()), QColor(255, 255, 255, 26));
+    painter.fillRect(QRect(0, 0, 1, height()), theme.panelEdge);
+}
+
+void FrendsSidebar::changeEvent(QEvent* event)
+{
+    QWidget::changeEvent(event);
+    if (event->type() == QEvent::PaletteChange || event->type() == QEvent::StyleChange) {
+        // The launcher theme changed: pull the label colours again and repaint.
+        applyScale();
+        update();
+    }
 }

@@ -244,6 +244,9 @@ class MainWindow : public QMainWindow {
     void setupFrendsUi();
     void retranslateFrendsUi();
     void applyFrendsScale();
+    /// Rebuilds the stylesheet colours of the custom chrome from the current
+    /// application palette, so light and dark themes both look right.
+    void applyFrendsTheme();
 
     void addInstance(const QString& url = QString(), const QMap<QString, QString>& extra_info = {});
     void activateInstance(BaseInstance* instance);

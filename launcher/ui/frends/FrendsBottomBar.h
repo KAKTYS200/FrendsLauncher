@@ -68,6 +68,7 @@ class FrendsBottomBar : public QWidget {
 
    protected:
     void paintEvent(QPaintEvent* event) override;
+    void changeEvent(QEvent* event) override;
 
    private:
     void styleWidgets(qreal scale);

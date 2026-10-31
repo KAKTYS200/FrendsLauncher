@@ -17,28 +17,31 @@
 
 #pragma once
 
+#include <QHash>
 #include <QList>
 #include <QString>
 #include <QWidget>
 
+class QEvent;
 class QJsonObject;
 class QLabel;
+class QLineEdit;
 class QPushButton;
 class QTableWidget;
+class QTimer;
 
 struct FrendsServerEntry {
     QString name;
     QString address;
-    QString note;
 };
 
 /**
  * The "Серверы" page.
  *
- * The original TLauncher ships a partner server list (InnerStateServer-1.3.json)
- * where every entry carries "hideAddress": true, so the address is never shown
- * and the placement is paid for. This page keeps the same idea but shows the
- * real address of every server and never reorders the list for money.
+ * Two panels side by side. The left one ranks public servers by the number of
+ * players online and re-pings them every ten minutes; the right one is the
+ * player's own list, which they can add to and remove from. Both panels show
+ * the real address of every server: there is no paid placement here.
  */
 class FrendsServersPage : public QWidget {
     Q_OBJECT
@@ -50,31 +53,86 @@ class FrendsServersPage : public QWidget {
     void applyScale();
     void retranslate();
 
+    /// How often the top list re-pings its servers.
+    static constexpr int REFRESH_MINUTES = 10;
+
    public slots:
-    /// Re-pings every server in the list.
-    void refresh();
+    /// Re-pings both lists. Without `force` a refresh that follows closely on
+    /// the previous one is skipped, so flicking between pages costs nothing.
+    void refresh(bool force = false);
 
    signals:
-    /// Emitted when the user asks to join a server with the selected instance.
+    /// Emitted when the player asks to join a server with the selected build.
     void playRequested(const QString& address);
 
-   private:
-    void pingRow(int row);
-    void onPingSucceeded(int row, const QJsonObject& data, qint64 latencyMs);
-    void onPingFailed(int row);
-    void updateStatus();
-    QString selectedAddress() const;
+   protected:
+    void changeEvent(QEvent* event) override;
+    void showEvent(QShowEvent* event) override;
 
+   private:
+    /// What a status ping told us about one address.
+    struct Status {
+        bool answered = false;
+        bool online = false;
+        int players = 0;
+        int capacity = 0;
+        QString version;
+        QString motd;
+        qint64 latency = -1;
+    };
+
+    void buildPanels();
+    QWidget* makePanel(const QString& title, QWidget** headerOut, QWidget** bodyOut, QLabel** titleOut, QLabel** hintOut);
+
+    void ping(const QString& address);
+    void onPinged(const QString& address, const Status& status);
+
+    void rebuildTop();
+    void rebuildMine();
+    void loadMine();
+    void saveMine();
+    void addMine();
+    void removeMine();
+
+    void updateTopStatus();
+    void updateMineStatus();
+    void restyle();
+
+    QString selectedAddress(QTableWidget* table, const QList<FrendsServerEntry>& entries) const;
+
+    // Panels
+    QWidget* m_topPanel = nullptr;
+    QWidget* m_minePanel = nullptr;
+    QLabel* m_topTitle = nullptr;
+    QLabel* m_mineTitle = nullptr;
+    QLabel* m_topHint = nullptr;
+    QLabel* m_mineHint = nullptr;
     QLabel* m_title = nullptr;
     QLabel* m_subtitle = nullptr;
-    QLabel* m_status = nullptr;
-    QLabel* m_legend = nullptr;
-    QPushButton* m_refreshButton = nullptr;
-    QPushButton* m_copyButton = nullptr;
-    QPushButton* m_playButton = nullptr;
-    QTableWidget* m_table = nullptr;
 
-    QList<FrendsServerEntry> m_servers;
+    QPushButton* m_topRefresh = nullptr;
+    QPushButton* m_mineRefresh = nullptr;
+    QPushButton* m_addButton = nullptr;
+    QPushButton* m_removeButton = nullptr;
+    QLineEdit* m_addName = nullptr;
+    QLineEdit* m_addAddress = nullptr;
+
+    QTableWidget* m_topTable = nullptr;
+    QTableWidget* m_mineTable = nullptr;
+
+    QTimer* m_timer = nullptr;
+    bool m_started = false;
+
+    /// The catalogue that feeds the ranking, and the player's own list.
+    QList<FrendsServerEntry> m_catalogue;
+    QList<FrendsServerEntry> m_mine;
+    /// The ranking as currently displayed, so a row index maps back to a server.
+    QList<FrendsServerEntry> m_topView;
+
+    /// Latest ping result per address; the ranking is sorted from this.
+    QHash<QString, Status> m_status;
+    /// Pings still running; the tables are rebuilt when this reaches zero.
     int m_pending = 0;
-    int m_checked = 0;
+
+    qint64 m_lastRefreshMs = 0;
 };

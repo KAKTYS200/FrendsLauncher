@@ -44,6 +44,7 @@
 #include <utility>
 
 #include "InstanceView.h"
+#include "ui/frends/FrendsPalette.h"
 
 VisualGroup::VisualGroup(QString text, InstanceView* view) : view(view), text(std::move(text)), collapsed(false) {}
 
@@ -160,7 +161,9 @@ void VisualGroup::drawHeader(QPainter* painter, const QStyleOptionViewItem& opti
     constexpr int arrowSize = 4;
 
     // Chevron: points down when the group is open, right when it is collapsed.
-    painter->setPen(QPen(QColor(226, 228, 232, 210), 1.8, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+    QColor chevron = FrendsTheme::colors().text;
+    chevron.setAlpha(210);
+    painter->setPen(QPen(chevron, 1.8, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
     QPolygon arrow;
     if (collapsed) {
         arrow << QPoint(arrowLeft - arrowSize, centerY - arrowSize) << QPoint(arrowLeft + arrowSize / 2, centerY)
@@ -171,7 +174,7 @@ void VisualGroup::drawHeader(QPainter* painter, const QStyleOptionViewItem& opti
     }
     painter->drawPolyline(arrow);
 
-    painter->setPen(QColor(0xEE, 0xEF, 0xF2));
+    painter->setPen(FrendsTheme::colors().text);
     QRect textRect(optRect);
     textRect.setLeft(arrowLeft + 14);
     textRect.setHeight(fontMetrics.height());

@@ -47,6 +47,7 @@ class FrendsSidebar : public QWidget {
 
    protected:
     void paintEvent(QPaintEvent* event) override;
+    void changeEvent(QEvent* event) override;
 
    private:
     FrendsNavButton* addNavigationButton(const QString& page, const QString& icon);

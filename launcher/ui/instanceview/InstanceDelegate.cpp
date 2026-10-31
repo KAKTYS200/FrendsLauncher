@@ -48,6 +48,7 @@
 #include "BaseInstance.h"
 #include "InstanceList.h"
 #include "minecraft/MinecraftInstance.h"
+#include "ui/frends/FrendsPalette.h"
 #include "ui/frends/FrendsScale.h"
 #include "InstanceView.h"
 
@@ -152,6 +153,7 @@ void ListViewDelegate::paint(QPainter* painter, const QStyleOptionViewItem& opti
 
     const qreal s = FrendsScale::factor(opt.widget);
     const bool selected = opt.state & QStyle::State_Selected;
+    const auto& theme = FrendsTheme::colors();
 
     QIcon::Mode mode = QIcon::Normal;
     if (!(opt.state & QStyle::State_Enabled))
@@ -170,11 +172,11 @@ void ListViewDelegate::paint(QPainter* painter, const QStyleOptionViewItem& opti
 
     if (selected) {
         QLinearGradient fill(tile.topLeft(), tile.bottomLeft());
-        fill.setColorAt(0.0, QColor(104, 152, 82, 240));
-        fill.setColorAt(1.0, QColor(62, 104, 50, 240));
+        fill.setColorAt(0.0, theme.tileSelectedTop);
+        fill.setColorAt(1.0, theme.tileSelectedBottom);
         painter->fillPath(plate, fill);
     } else {
-        painter->fillPath(plate, QColor(26, 29, 36, 200));
+        painter->fillPath(plate, theme.tile);
     }
 
     const int iconSide = int(qRound(56 * s));
@@ -186,7 +188,7 @@ void ListViewDelegate::paint(QPainter* painter, const QStyleOptionViewItem& opti
     nameFont.setPixelSize(qMax(9, int(qRound(11 * s))));
     nameFont.setBold(false);
     painter->setFont(nameFont);
-    painter->setPen(QColor(0xF2, 0xF3, 0xF5));
+    painter->setPen(theme.text);
 
     const int nameTop = iconRect.bottom() + int(qRound(7 * s));
     const QRect nameRect(int(tile.left()), nameTop, int(tile.width()), int(qRound(15 * s)));
@@ -210,11 +212,11 @@ void ListViewDelegate::paint(QPainter* painter, const QStyleOptionViewItem& opti
         const QRectF chip(tile.left() + 6 * s, nameRect.bottom() + 3 * s, tile.width() - 12 * s, 18 * s);
         if (selected) {
             painter->setPen(Qt::NoPen);
-            painter->setBrush(QColor(0x5F, 0xBF, 0x3F));
+            painter->setBrush(theme.chip);
             painter->drawRoundedRect(chip, 5 * s, 5 * s);
-            painter->setPen(QColor(0xFF, 0xFF, 0xFF));
+            painter->setPen(theme.chipText);
         } else {
-            painter->setPen(QColor(255, 255, 255, 150));
+            painter->setPen(theme.textMuted);
         }
         painter->drawText(chip, Qt::AlignCenter, version);
     }
@@ -224,9 +226,9 @@ void ListViewDelegate::paint(QPainter* painter, const QStyleOptionViewItem& opti
     // Outline last, so it sits on top of the artwork instead of under it.
     painter->setBrush(Qt::NoBrush);
     if (selected)
-        painter->setPen(QPen(QColor(0x86, 0xD9, 0x62), qMax(1.5, 2.0 * s)));
+        painter->setPen(QPen(theme.tileSelectedBorder, qMax(1.5, 2.0 * s)));
     else
-        painter->setPen(QPen(QColor(255, 255, 255, 18), 1));
+        painter->setPen(QPen(theme.tileBorder, 1));
     painter->drawRoundedRect(tile, radius, radius);
 
     auto instance = static_cast<BaseInstance*>(index.data(InstanceList::InstancePointerRole).value<void*>());
@@ -244,9 +246,9 @@ void ListViewDelegate::paint(QPainter* painter, const QStyleOptionViewItem& opti
         const qreal ratio = qreal(progressValue) / qreal(progressMax);
         const QRectF track(tile.left(), tile.bottom() - 3 * s, tile.width(), 3 * s);
         painter->setPen(Qt::NoPen);
-        painter->setBrush(QColor(255, 255, 255, 40));
+        painter->setBrush(theme.tileBorder);
         painter->drawRect(track);
-        painter->setBrush(QColor(0xF9, 0xD9, 0x00));
+        painter->setBrush(theme.navActiveTop);
         painter->drawRect(QRectF(track.left(), track.top(), track.width() * ratio, track.height()));
     }
 

@@ -32,6 +32,7 @@
 #include <QStyle>
 #include <QToolButton>
 
+#include "FrendsPalette.h"
 #include "FrendsScale.h"
 
 namespace {
@@ -69,17 +70,18 @@ class UpwardComboBox : public QComboBox {
 
 QString comboStyle(qreal scale)
 {
+    const auto& theme = FrendsTheme::colors();
     return QStringLiteral(
                "QComboBox {"
-               "  background: #1B1F27;"
-               "  color: #E7E8EC;"
-               "  border: 1px solid rgba(255, 255, 255, 32);"
+               "  background: %9;"
+               "  color: %10;"
+               "  border: 1px solid %11;"
                "  border-radius: %8px;"
                "  padding: %1px %2px;"
                "  min-height: %3px;"
                "  font-size: %4px;"
                "}"
-               "QComboBox:hover { border: 1px solid rgba(255, 255, 255, 70); }"
+               "QComboBox:hover { border: 1px solid %12; }"
                "QComboBox::drop-down {"
                "  width: %5px;"
                "  border: none;"
@@ -95,11 +97,11 @@ QString comboStyle(qreal scale)
                "  height: %7px;"
                "}"
                "QComboBox QAbstractItemView {"
-               "  background: #1B1F27;"
-               "  color: #E7E8EC;"
-               "  border: 1px solid rgba(255, 255, 255, 40);"
-               "  selection-background-color: #F9D900;"
-               "  selection-color: #3B2C00;"
+               "  background: %9;"
+               "  color: %10;"
+               "  border: 1px solid %11;"
+               "  selection-background-color: %13;"
+               "  selection-color: %14;"
                "  outline: none;"
                "}")
         .arg(qRound(4 * scale))
@@ -109,24 +111,36 @@ QString comboStyle(qreal scale)
         .arg(qRound(22 * scale))
         .arg(qMax(8, int(qRound(10 * scale))))
         .arg(qMax(5, int(qRound(6 * scale))))
-        .arg(qMax(4, int(qRound(6 * scale))));
+        .arg(qMax(4, int(qRound(6 * scale))))
+        .arg(theme.field.name())
+        .arg(theme.text.name())
+        .arg(FrendsTheme::css(theme.fieldBorder))
+        .arg(FrendsTheme::css(theme.text))
+        .arg(theme.navActiveTop.name())
+        .arg(theme.textOnAccent.name());
 }
 
 QString iconButtonStyle(qreal scale)
 {
-    // Square, slightly raised plates: on the dark bar a bare glyph floats away
+    const auto& theme = FrendsTheme::colors();
+    // Square, slightly raised plates: on the panel a bare glyph floats away
     // from the row, the plate gives it the same weight as the play button.
     return QStringLiteral(
                "QToolButton {"
-               "  background: rgba(255, 255, 255, 16);"
-               "  border: 1px solid rgba(255, 255, 255, 38);"
+               "  background: %3;"
+               "  border: 1px solid %4;"
                "  border-radius: %1px;"
                "  padding: %2px;"
                "}"
-               "QToolButton:hover { background: rgba(255, 255, 255, 38); border: 1px solid rgba(255, 255, 255, 80); }"
-               "QToolButton:pressed { background: rgba(255, 255, 255, 10); }")
+               "QToolButton:hover { background: %5; border: 1px solid %6; }"
+               "QToolButton:pressed { background: %7; }")
         .arg(qMax(4, int(qRound(6 * scale))))
-        .arg(qMax(2, int(qRound(5 * scale))));
+        .arg(qMax(2, int(qRound(5 * scale))))
+        .arg(FrendsTheme::css(theme.buttonPlate))
+        .arg(FrendsTheme::css(theme.buttonPlateBorder))
+        .arg(FrendsTheme::css(theme.buttonPlate.lighter(135)))
+        .arg(FrendsTheme::css(theme.text))
+        .arg(FrendsTheme::css(theme.buttonPlate.darker(115)));
 }
 }  // namespace
 
@@ -261,8 +275,10 @@ void FrendsBottomBar::showDownloadProgress(const QString& label)
     }
     if (m_downloadBar) {
         // Busy mode only until the first real progress arrives; resetting the
-        // range on every status change would keep wiping the fill.
-        if (!m_downloadBar->isVisible()) {
+        // range on every status change would keep wiping the fill. isHidden()
+        // rather than isVisible(): a download can start before the main window
+        // is on screen, and then nothing would ever be marked visible.
+        if (m_downloadBar->isHidden()) {
             m_downloadBar->setRange(0, 0);
             m_downloadBar->show();
         }
@@ -277,14 +293,17 @@ void FrendsBottomBar::showDownloadProgress(const QString& label)
         m_downloadCancel->show();
     if (m_downloadStrip)
         m_downloadStrip->show();
-    // Make room for the strip, otherwise the control row gets squashed: the
-    // strip itself is a 26px bar plus its top/bottom margins.
-    setFixedHeight(FrendsScale::px(62, this) + qMax(14, FrendsScale::px(26, this)) + FrendsScale::px(10, this));
+    // The strip has its own row above the controls, so the panel simply grows
+    // by that row. Forcing a height here used to fight with applyScale().
+    updateGeometry();
 }
 
 void FrendsBottomBar::setDownloadProgress(qint64 current, qint64 total)
 {
-    if (!m_downloadBar || !m_downloadBar->isVisible())
+    // isHidden(), not isVisible(): the strip can be asked to show progress while
+    // the window is still being built, and isVisible() would then be false and
+    // the percentage would never appear.
+    if (!m_downloadBar || m_downloadBar->isHidden())
         return;
 
     if (total > 0) {
@@ -314,14 +333,17 @@ void FrendsBottomBar::hideDownloadProgress()
         m_downloadCancel->hide();
     if (m_downloadStrip)
         m_downloadStrip->hide();
-    setFixedHeight(FrendsScale::px(62, this));
+    updateGeometry();
 }
 
 void FrendsBottomBar::applyScale()
 {
     const qreal s = FrendsScale::factor(this);
 
-    setFixedHeight(FrendsScale::px(62, this));
+    // A minimum, not a fixed height: the download strip lives above the control
+    // row, and a fixed height would clip it away the moment it appears.
+    setMinimumHeight(FrendsScale::px(62, this));
+    setMaximumHeight(QWIDGETSIZE_MAX);
     // Tight margins and gaps: the row is the busiest place in the launcher and
     // at the base window width it only fits with everything drawn in close.
     m_layout->setContentsMargins(FrendsScale::px(10, this), FrendsScale::px(10, this), FrendsScale::px(10, this),
@@ -368,30 +390,38 @@ void FrendsBottomBar::applyScale()
 
 void FrendsBottomBar::styleWidgets(qreal scale)
 {
+    const auto& theme = FrendsTheme::colors();
     const int fontSize = qMax(9, int(qRound(12 * scale)));
 
     if (m_downloadLabel) {
         m_downloadLabel->setStyleSheet(
-            QStringLiteral("QLabel { color: #ffffff; font-size: %1px; background: transparent; }").arg(fontSize));
+            QStringLiteral("QLabel { color: %1; font-size: %2px; background: transparent; }").arg(theme.text.name()).arg(fontSize));
     }
     if (m_downloadCancel) {
         m_downloadCancel->setText(tr("Отмена"));
         m_downloadCancel->setStyleSheet(
-            QStringLiteral("QPushButton { background: rgba(0, 0, 0, 70); color: #ffffff; border: 1px solid rgba(0, 0, 0, 50);"
-                           " border-radius: 3px; font-size: %1px; padding: 2px 10px; }"
-                           "QPushButton:hover { background: rgba(0, 0, 0, 110); }").arg(fontSize));
+            QStringLiteral("QPushButton { background: %1; color: %2; border: 1px solid %3;"
+                           " border-radius: 3px; font-size: %4px; padding: 2px 10px; }"
+                           "QPushButton:hover { background: %5; }")
+                .arg(FrendsTheme::css(theme.buttonPlate))
+                .arg(theme.text.name())
+                .arg(FrendsTheme::css(theme.buttonPlateBorder))
+                .arg(fontSize)
+                .arg(FrendsTheme::css(theme.buttonPlate.lighter(130))));
         m_downloadCancel->setFixedHeight(qMax(10, FrendsScale::px(20, this)));
     }
     if (m_downloadBar) {
-        // The strip sits on the green panel: a solid black track with the brand
-        // yellow fill. It is the one thing the player watches during an install,
-        // so it gets real height instead of the hairline sliver it used to be.
+        // The strip sits on the panel: a muted track with the brand yellow fill.
+        // It is the one thing the player watches during an install, so it gets
+        // real height instead of a hairline sliver.
         const int barHeight = qMax(14, FrendsScale::px(26, this));
         m_downloadBar->setStyleSheet(QStringLiteral(
-                                         "QProgressBar { background: rgba(255, 255, 255, 28); border: none;"
+                                         "QProgressBar { background: %2; border: none;"
                                          " border-radius: 5px; height: %1px; text-align: center; }"
-                                         "QProgressBar::chunk { background: #F9D900; border-radius: 4px; }")
-                                         .arg(barHeight));
+                                         "QProgressBar::chunk { background: %3; border-radius: 4px; }")
+                                         .arg(barHeight)
+                                         .arg(FrendsTheme::css(theme.dark ? QColor(255, 255, 255, 28) : QColor(0, 0, 0, 26)))
+                                         .arg(theme.navActiveTop.name()));
         m_downloadBar->setFixedHeight(barHeight);
     }
     if (m_downloadPercent) {
@@ -402,20 +432,26 @@ void FrendsBottomBar::styleWidgets(qreal scale)
         m_downloadPercent->setFont(percentFont);
         m_downloadPercent->setFixedWidth(qMax(34, FrendsScale::px(46, this)));
         m_downloadPercent->setStyleSheet(
-            QStringLiteral("QLabel { color: #ffffff; font-size: %1px; background: transparent; }").arg(fontSize));
+            QStringLiteral("QLabel { color: %1; font-size: %2px; background: transparent; }").arg(theme.text.name()).arg(fontSize));
     }
 
     if (m_addAccountButton) {
         const int side = qMax(18, FrendsScale::px(30, this));
         m_addAccountButton->setFixedSize(side, side);
         m_addAccountButton->setStyleSheet(
-            QStringLiteral("QToolButton { background: #1B1F27; color: #E7E8EC;"
-                           " border: 1px solid rgba(255, 255, 255, 38); border-radius: %2px;"
-                           " font-size: %1px; font-weight: 700; padding: 0px; }"
-                           "QToolButton:hover { background: #262B35; border: 1px solid rgba(255, 255, 255, 80); }"
-                           "QToolButton:pressed { background: #14171D; }")
+            QStringLiteral("QToolButton { background: %1; color: %2;"
+                           " border: 1px solid %3; border-radius: %4px;"
+                           " font-size: %5px; font-weight: 700; padding: 0px; }"
+                           "QToolButton:hover { background: %6; border: 1px solid %7; }"
+                           "QToolButton:pressed { background: %8; }")
+                .arg(theme.field.name())
+                .arg(theme.text.name())
+                .arg(FrendsTheme::css(theme.fieldBorder))
+                .arg(qMax(4, int(qRound(6 * scale))))
                 .arg(qMax(12, FrendsScale::px(17, this)))
-                .arg(qMax(4, int(qRound(6 * scale)))));
+                .arg(FrendsTheme::css(theme.field.lighter(115)))
+                .arg(FrendsTheme::css(theme.text))
+                .arg(FrendsTheme::css(theme.field.darker(115))));
         m_addAccountButton->setToolTip(tr("Добавить аккаунт"));
     }
     m_accountCombo->setStyleSheet(comboStyle(scale));
@@ -423,46 +459,64 @@ void FrendsBottomBar::styleWidgets(qreal scale)
 
     const int indicator = qMax(10, int(qRound(14 * scale)));
     m_updateCheck->setStyleSheet(QStringLiteral(
-                                     "QCheckBox { color: #DCDDE1; font-size: %1px; spacing: %2px; background: transparent; }"
-                                     "QCheckBox::indicator { width: %3px; height: %3px; border: 1px solid rgba(255, 255, 255, 90);"
-                                     " background: #1B1F27; border-radius: 3px; }"
-                                     "QCheckBox::indicator:checked { background: #F9D900; border: 1px solid #F9D900; }")
+                                     "QCheckBox { color: %4; font-size: %1px; spacing: %2px; background: transparent; }"
+                                     "QCheckBox::indicator { width: %3px; height: %3px; border: 1px solid %5;"
+                                     " background: %6; border-radius: 3px; }"
+                                     "QCheckBox::indicator:checked { background: %7; border: 1px solid %7; }")
                                      .arg(qMax(8, fontSize - 1))
                                      .arg(qRound(6 * scale))
-                                     .arg(indicator));
+                                     .arg(indicator)
+                                     .arg(theme.text.name())
+                                     .arg(FrendsTheme::css(theme.fieldBorder))
+                                     .arg(theme.field.name())
+                                     .arg(theme.navActiveTop.name()));
 
     // The one button the whole launcher exists for, so it carries the warm
     // accent instead of the flat plate the others use.
     m_playButton->setStyleSheet(QStringLiteral(
                                     "QPushButton {"
-                                    "  background: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 #FFB347, stop:1 #F07C1E);"
+                                    "  background: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 %3, stop:1 %4);"
                                     "  color: #ffffff;"
                                     "  border: 1px solid rgba(255, 255, 255, 60);"
                                     "  border-radius: %2px;"
                                     "  font-size: %1px;"
                                     "  font-weight: 700;"
                                     "}"
-                                    "QPushButton:hover { background: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 #FFC066, "
-                                    "stop:1 #FA8B2A); }"
-                                    "QPushButton:pressed { background: #DC6C14; }"
-                                    "QPushButton:disabled { background: #3A3F49; color: #8A8F98; border: 1px solid rgba(255, 255, 255, 20); }")
+                                    "QPushButton:hover { background: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 %5, "
+                                    "stop:1 %6); }"
+                                    "QPushButton:pressed { background: %7; }"
+                                    "QPushButton:disabled { background: %8; color: %9; border: 1px solid %10; }")
                                     .arg(qMax(10, int(qRound(15 * scale))))
-                                    .arg(qMax(4, int(qRound(7 * scale)))));
+                                    .arg(qMax(4, int(qRound(7 * scale))))
+                                    .arg(theme.playTop.name())
+                                    .arg(theme.playBottom.name())
+                                    .arg(theme.playTop.lighter(112).name())
+                                    .arg(theme.playBottom.lighter(110).name())
+                                    .arg(theme.playBottom.darker(112).name())
+                                    .arg(FrendsTheme::css(theme.buttonPlate))
+                                    .arg(FrendsTheme::css(theme.textMuted))
+                                    .arg(FrendsTheme::css(theme.buttonPlateBorder)));
 
     m_modsButton->setStyleSheet(QStringLiteral(
                                     "QPushButton {"
-                                    "  background: rgba(255, 255, 255, 14);"
-                                    "  border: 1px solid rgba(255, 255, 255, 45);"
+                                    "  background: %3;"
+                                    "  border: 1px solid %4;"
                                     "  border-radius: %2px;"
-                                    "  color: #EDEEF1;"
+                                    "  color: %5;"
                                     "  font-size: %1px;"
                                     "  font-weight: 700;"
                                     "  letter-spacing: 0.3px;"
                                     "}"
-                                    "QPushButton:hover { background: rgba(255, 255, 255, 32); border: 1px solid rgba(255, 255, 255, 90); }"
-                                    "QPushButton:pressed { background: rgba(255, 255, 255, 8); }")
+                                    "QPushButton:hover { background: %6; border: 1px solid %7; }"
+                                    "QPushButton:pressed { background: %8; }")
                                     .arg(qMax(8, int(qRound(10 * scale))))
-                                    .arg(qMax(4, int(qRound(7 * scale)))));
+                                    .arg(qMax(4, int(qRound(7 * scale))))
+                                    .arg(FrendsTheme::css(theme.buttonPlate))
+                                    .arg(FrendsTheme::css(theme.buttonPlateBorder))
+                                    .arg(theme.text.name())
+                                    .arg(FrendsTheme::css(theme.buttonPlate.lighter(135)))
+                                    .arg(FrendsTheme::css(theme.text))
+                                    .arg(FrendsTheme::css(theme.buttonPlate.darker(115))));
 
     for (auto* button : { m_refreshButton, m_launcherUpdateButton, m_folderButton, m_settingsButton })
         button->setStyleSheet(iconButtonStyle(scale));
@@ -513,11 +567,23 @@ void FrendsBottomBar::paintEvent(QPaintEvent* event)
     Q_UNUSED(event);
 
     QPainter painter(this);
+    const auto& theme = FrendsTheme::colors();
+
     QLinearGradient gradient(0, 0, 0, height());
-    gradient.setColorAt(0.0, QColor(14, 17, 23, 244));
-    gradient.setColorAt(1.0, QColor(8, 10, 14, 248));
+    gradient.setColorAt(0.0, theme.panelTop);
+    gradient.setColorAt(1.0, theme.panelBottom);
     painter.fillRect(rect(), gradient);
 
     // Hairline on top: the bar is a separate surface from the content above it.
-    painter.fillRect(QRect(0, 0, width(), 1), QColor(255, 255, 255, 32));
+    painter.fillRect(QRect(0, 0, width(), 1), theme.panelEdge);
+}
+
+void FrendsBottomBar::changeEvent(QEvent* event)
+{
+    QWidget::changeEvent(event);
+    if (event->type() == QEvent::PaletteChange || event->type() == QEvent::StyleChange) {
+        // The launcher theme changed: restyle every child from the new palette.
+        styleWidgets(FrendsScale::factor(this));
+        update();
+    }
 }

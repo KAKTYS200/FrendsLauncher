@@ -71,9 +71,6 @@
           </property>
           <item>
            <widget class="QWidget" name="contentCard">
-            <property name="styleSheet">
-             <string notr="true">#contentCard { background-color: rgba(8, 10, 15, 88); border: 1px solid rgba(255, 255, 255, 85); border-radius: 12px; }</string>
-            </property>
             <layout class="QVBoxLayout" name="contentLayout">
              <property name="spacing">
               <number>0</number>

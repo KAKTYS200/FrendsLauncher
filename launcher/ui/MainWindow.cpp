@@ -134,7 +134,9 @@
 #include "frendskin/FrendSkinServer.h"
 #include "FrendsSelfUpdate.h"
 #include "ui/frends/FrendsBottomBar.h"
+#include "ui/frends/FrendsPalette.h"
 #include "ui/frends/FrendsScale.h"
+#include "ui/frends/FrendsBackdrop.h"
 #include "ui/frends/FrendsServersPage.h"
 #include "ui/frends/FrendsCreatePage.h"
 #include "ui/frends/FrendsSidebar.h"
@@ -777,12 +779,41 @@ void MainWindow::setupFrendsUi()
     connect(APPLICATION->settings(), &SettingsObject::SettingChanged, this, [this](const Setting& setting, QVariant) {
         if (setting.id() == QLatin1String("FrendsUiScale"))
             applyFrendsScale();
+        else if (setting.id() == QLatin1String("ApplicationTheme"))
+            applyFrendsTheme();
+        else if (setting.id() == QLatin1String("FrendsBackdrop"))
+            ui->contentRow->setMode(FrendsBackdrop::modeFromSettings());
     });
 
     frendsSyncAccounts();
     frendsSyncInstances();
     frendsUpdateInstanceState();
     applyFrendsScale();
+    applyFrendsTheme();
+}
+
+void MainWindow::applyFrendsTheme()
+{
+    const auto& theme = FrendsTheme::colors();
+
+    // The content card is a plain QWidget, so its glass plate comes from a
+    // stylesheet - and that has to be rebuilt whenever the theme changes.
+    if (ui->contentCard) {
+        ui->contentCard->setStyleSheet(QStringLiteral("#contentCard { background-color: %1; border: 1px solid %2;"
+                                                      " border-radius: 12px; }")
+                                           .arg(FrendsTheme::css(theme.card))
+                                           .arg(FrendsTheme::css(theme.cardBorder)));
+    }
+    if (view) {
+        view->setStyleSheet(QStringLiteral("QTreeView { background: transparent; border: none; color: %1;"
+                                           " selection-background-color: transparent; selection-color: %1; }")
+                                .arg(theme.text.name()));
+        view->viewport()->update();
+    }
+    if (m_frendsSidebar)
+        m_frendsSidebar->update();
+    if (m_frendsBottomBar)
+        m_frendsBottomBar->update();
 }
 
 void MainWindow::applyFrendsScale()
@@ -2330,6 +2361,10 @@ void MainWindow::changeEvent(QEvent* event)
     if (event->type() == QEvent::LanguageChange) {
         retranslateUi();
     }
+    // Switching the launcher theme repaints the custom chrome; the content card
+    // carries its colours in a stylesheet, so it has to be handed the new ones.
+    if (event->type() == QEvent::PaletteChange || event->type() == QEvent::StyleChange)
+        applyFrendsTheme();
     QMainWindow::changeEvent(event);
 }
 

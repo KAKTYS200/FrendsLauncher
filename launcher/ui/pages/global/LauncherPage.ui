@@ -220,6 +220,20 @@
             </item>
            </layout>
           </item>
+          <item>
+           <widget class="QLabel" name="backdropLabel">
+            <property name="text">
+             <string>Анимация фона</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QComboBox" name="backdropCombo">
+            <property name="toolTip">
+             <string>Что происходит на фоне главного окна: кубы вращаются на месте или плавно падают сверху вниз.</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
