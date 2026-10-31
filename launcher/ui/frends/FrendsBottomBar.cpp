@@ -28,6 +28,7 @@
 #include <QPainter>
 #include <QApplication>
 #include <QProgressBar>
+#include <QScopedValueRollback>
 #include <QPushButton>
 #include <QStyle>
 #include <QToolButton>
@@ -390,6 +391,12 @@ void FrendsBottomBar::applyScale()
 
 void FrendsBottomBar::styleWidgets(qreal scale)
 {
+    // Restyling a child sends StyleChange, which can come back here through
+    // changeEvent(); the guard stops that from looping.
+    if (m_styling)
+        return;
+    QScopedValueRollback<bool> guard(m_styling, true);
+
     const auto& theme = FrendsTheme::colors();
     const int fontSize = qMax(9, int(qRound(12 * scale)));
 
@@ -583,7 +590,15 @@ void FrendsBottomBar::changeEvent(QEvent* event)
     QWidget::changeEvent(event);
     if (event->type() == QEvent::PaletteChange || event->type() == QEvent::StyleChange) {
         // The launcher theme changed: restyle every child from the new palette.
-        styleWidgets(FrendsScale::factor(this));
-        update();
+        // Deferred, because restyling inside the palette event would call
+        // polish() on a style that is still being replaced.
+        if (m_restylePending)
+            return;
+        m_restylePending = true;
+        QTimer::singleShot(0, this, [this] {
+            m_restylePending = false;
+            styleWidgets(FrendsScale::factor(this));
+            update();
+        });
     }
 }

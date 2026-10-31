@@ -34,6 +34,7 @@
 #include <QLocale>
 #include <QPushButton>
 #include <QRegularExpression>
+#include <QScopedValueRollback>
 #include <QTableWidget>
 #include <QTimer>
 #include <QVBoxLayout>
@@ -321,6 +322,12 @@ void FrendsServersPage::retranslate()
 
 void FrendsServersPage::applyScale()
 {
+    // The panel stylesheets below send StyleChange, which lands in
+    // changeEvent() and calls this again; without the guard that never stops.
+    if (m_applyingScale)
+        return;
+    QScopedValueRollback<bool> guard(m_applyingScale, true);
+
     const int titleFont = FrendsScale::px(18, this);
     const int bodyFont = FrendsScale::px(14, this);
     const int smallFont = FrendsScale::px(12, this);
@@ -449,9 +456,17 @@ void FrendsServersPage::changeEvent(QEvent* event)
     QWidget::changeEvent(event);
     if (event->type() == QEvent::PaletteChange || event->type() == QEvent::StyleChange) {
         // The launcher theme changed: the panels carry their colours in a
-        // stylesheet, so they have to be handed the new ones.
-        applyScale();
-        restyle();
+        // stylesheet, so they have to be handed the new ones. Deferred,
+        // because restyling inside the palette event would call polish() on a
+        // style that is still being replaced.
+        if (m_restylePending)
+            return;
+        m_restylePending = true;
+        QTimer::singleShot(0, this, [this] {
+            m_restylePending = false;
+            applyScale();
+            restyle();
+        });
     }
 }
 

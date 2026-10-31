@@ -24,6 +24,8 @@
 #include <QLinearGradient>
 #include <QPainter>
 #include <QPainterPath>
+#include <QScopedValueRollback>
+#include <QTimer>
 #include <QPushButton>
 #include <QSpacerItem>
 #include <QVBoxLayout>
@@ -347,6 +349,12 @@ FrendsSidebar::FrendsSidebar(QWidget* parent) : QWidget(parent)
 
 void FrendsSidebar::applyScale()
 {
+    // The stylesheets below send StyleChange, which comes back through
+    // changeEvent(); the guard keeps that from turning into a loop.
+    if (m_applyingScale)
+        return;
+    QScopedValueRollback<bool> guard(m_applyingScale, true);
+
     const auto& theme = FrendsTheme::colors();
 
     setFixedWidth(FrendsScale::px(190, this));
@@ -464,7 +472,15 @@ void FrendsSidebar::changeEvent(QEvent* event)
     QWidget::changeEvent(event);
     if (event->type() == QEvent::PaletteChange || event->type() == QEvent::StyleChange) {
         // The launcher theme changed: pull the label colours again and repaint.
-        applyScale();
-        update();
+        // Deferred, because restyling inside the palette event would call
+        // polish() on a style that is still being replaced.
+        if (m_restylePending)
+            return;
+        m_restylePending = true;
+        QTimer::singleShot(0, this, [this] {
+            m_restylePending = false;
+            applyScale();
+            update();
+        });
     }
 }

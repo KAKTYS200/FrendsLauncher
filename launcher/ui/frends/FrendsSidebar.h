@@ -65,6 +65,10 @@ class FrendsSidebar : public QWidget {
     /// Page key each navigation button stands for, in the order they were added.
     QStringList m_navPages;
     QString m_activePage;
+    /// Guards applyScale() against re-entering itself through StyleChange.
+    bool m_applyingScale = false;
+    /// A restyle is already queued for the next event loop pass.
+    bool m_restylePending = false;
 
     FrendsNavButton* m_newsButton = nullptr;
     FrendsNavButton* m_instancesButton = nullptr;

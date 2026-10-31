@@ -142,6 +142,9 @@
 #include "ui/frends/FrendsSidebar.h"
 #include "ui/widgets/LabeledToolButton.h"
 
+#include <QScopedValueRollback>
+#include <QTimer>
+
 #include "minecraft/PackProfile.h"
 #include "minecraft/VersionFile.h"
 #include "minecraft/WorldList.h"
@@ -792,8 +795,26 @@ void MainWindow::setupFrendsUi()
     applyFrendsTheme();
 }
 
+void MainWindow::scheduleFrendsTheme()
+{
+    if (m_frendsThemePending)
+        return;
+    m_frendsThemePending = true;
+    QTimer::singleShot(0, this, [this] {
+        m_frendsThemePending = false;
+        applyFrendsTheme();
+    });
+}
+
 void MainWindow::applyFrendsTheme()
 {
+    // setStyleSheet() below sends StyleChange, which lands in changeEvent() and
+    // calls this again. Re-entering once is harmless, but it never stops: each
+    // pass would set a stylesheet again. The guard breaks the loop.
+    if (m_applyingFrendsTheme)
+        return;
+    QScopedValueRollback<bool> guard(m_applyingFrendsTheme, true);
+
     const auto& theme = FrendsTheme::colors();
 
     // The content card is a plain QWidget, so its glass plate comes from a
@@ -2363,8 +2384,10 @@ void MainWindow::changeEvent(QEvent* event)
     }
     // Switching the launcher theme repaints the custom chrome; the content card
     // carries its colours in a stylesheet, so it has to be handed the new ones.
+    // Deferred: during the theme apply the widget style is momentarily null and
+    // setStyleSheet() would crash inside polish().
     if (event->type() == QEvent::PaletteChange || event->type() == QEvent::StyleChange)
-        applyFrendsTheme();
+        scheduleFrendsTheme();
     QMainWindow::changeEvent(event);
 }
 

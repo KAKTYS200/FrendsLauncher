@@ -247,6 +247,11 @@ class MainWindow : public QMainWindow {
     /// Rebuilds the stylesheet colours of the custom chrome from the current
     /// application palette, so light and dark themes both look right.
     void applyFrendsTheme();
+    /// Queues applyFrendsTheme() for the next event loop pass. Restyling has to
+    /// happen outside the palette/style event: while a theme is being applied
+    /// the widget style is momentarily null, and setStyleSheet() would call
+    /// polish() on it.
+    void scheduleFrendsTheme();
 
     void addInstance(const QString& url = QString(), const QMap<QString, QString>& extra_info = {});
     void activateInstance(BaseInstance* instance);
@@ -281,6 +286,12 @@ class MainWindow : public QMainWindow {
     FrendsCreatePage* m_createPage = nullptr;
     QStackedWidget* m_contentStack = nullptr;
     qreal m_lastFrendsScale = -1.0;
+    /// True while applyFrendsTheme() is running. Setting a stylesheet sends
+    /// StyleChange, which comes straight back into changeEvent(); without this
+    /// guard the theme re-applies itself until the stack runs out.
+    bool m_applyingFrendsTheme = false;
+    /// A theme repaint is already queued for the next event loop pass.
+    bool m_frendsThemePending = false;
 
     /// The task whose progress the download strip is showing, if any.
     QPointer<Task> m_currentDownloadTask;

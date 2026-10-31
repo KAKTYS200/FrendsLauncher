@@ -122,6 +122,11 @@ class FrendsServersPage : public QWidget {
 
     QTimer* m_timer = nullptr;
     bool m_started = false;
+    /// Guards applyScale() against re-entering itself: setting the panel
+    /// stylesheets sends StyleChange, which calls back into changeEvent().
+    bool m_applyingScale = false;
+    /// A restyle is already queued for the next event loop pass.
+    bool m_restylePending = false;
 
     /// The catalogue that feeds the ranking, and the player's own list.
     QList<FrendsServerEntry> m_catalogue;

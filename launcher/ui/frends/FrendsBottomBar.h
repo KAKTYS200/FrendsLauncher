@@ -72,6 +72,10 @@ class FrendsBottomBar : public QWidget {
 
    private:
     void styleWidgets(qreal scale);
+    /// Guards styleWidgets() against re-entering itself through StyleChange.
+    bool m_styling = false;
+    /// A restyle is already queued for the next event loop pass.
+    bool m_restylePending = false;
 
     QHBoxLayout* m_layout = nullptr;
     QToolButton* m_addAccountButton = nullptr;
