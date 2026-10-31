@@ -205,6 +205,11 @@ class Application : public QApplication {
 
     InstanceWindow* showInstanceWindow(BaseInstance* instance, QString page = QString());
     MainWindow* showMainWindow(bool minimized = false);
+    /// Hides the launcher window without tearing it down, so the same window
+    /// (with its selection and page) can come back when the game exits. Used
+    /// instead of closeAllWindows(): closing destroys the window and the
+    /// process has nothing left to show afterwards.
+    void hideMainWindow();
     ViewLogWindow* showLogWindow();
 
     void updateIsRunning(bool running);

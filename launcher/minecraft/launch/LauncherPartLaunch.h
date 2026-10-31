@@ -40,6 +40,9 @@ class LauncherPartLaunch : public LaunchStep {
     void on_state(LoggedProcess::State state);
 
    private:
+    /// Brings the launcher window back if it stepped aside for the game.
+    void restoreLauncherWindow();
+
     LoggedProcess m_process;
     QString m_command;
     AuthSessionPtr m_session;
@@ -47,4 +50,7 @@ class LauncherPartLaunch : public LaunchStep {
     MinecraftTarget::Ptr m_targetToJoin;
 
     bool mayProceed = false;
+    /// True once the launcher stepped aside for the game. The window has to be
+    /// brought back when the game ends, whether it exited cleanly or crashed.
+    bool m_launcherHidden = false;
 };

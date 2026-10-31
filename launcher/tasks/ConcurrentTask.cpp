@@ -245,8 +245,11 @@ qint64 ConcurrentTask::aggregateProgress() const
     if (total == 0)
         return 0;
 
-    // Finished subtasks count as whole units.
-    double done = m_done.size() + m_failed.size() + m_succeeded.size();
+    // Finished subtasks count as whole units. m_done already holds both the
+    // succeeded and the failed ones, so adding m_succeeded and m_failed here
+    // would count every finished subtask twice and push the bar to 100% halfway
+    // through the batch.
+    double done = m_done.size();
 
     // Running subtasks contribute their own fraction, but only when the subtask
     // actually reports a total: a task that just says "0 / 0" would otherwise

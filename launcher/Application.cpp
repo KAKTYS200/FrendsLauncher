@@ -888,7 +888,10 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
             resetIfInvalid(m_settings->registerSetting("LegacyFMLLibsURLOverride", "").get());
         }
 
-        m_settings->registerSetting("CloseAfterLaunch", false);
+        // On by default: the launcher steps aside while the game runs and comes
+        // back when it exits. It is only hidden, never closed, so the return is
+        // instant and nothing is lost.
+        m_settings->registerSetting("CloseAfterLaunch", true);
         m_settings->registerSetting("QuitAfterGameStop", false);
 
         m_settings->registerSetting("Env", "{}");
@@ -1736,6 +1739,11 @@ MainWindow* Application::showMainWindow(bool minimized)
 {
     if (m_mainWindow) {
         m_mainWindow->setWindowState(m_mainWindow->windowState() & ~Qt::WindowMinimized);
+        // A window that was hidden (the launcher stepped aside for the game)
+        // stays invisible through raise() and activateWindow(); it has to be
+        // shown explicitly for the launcher to actually come back.
+        if (!m_mainWindow->isVisible())
+            m_mainWindow->show();
         m_mainWindow->raise();
         m_mainWindow->activateWindow();
     } else {
@@ -1755,6 +1763,14 @@ MainWindow* Application::showMainWindow(bool minimized)
         m_openWindows++;
     }
     return m_mainWindow;
+}
+
+void Application::hideMainWindow()
+{
+    // Only the window goes away; the object and its state stay, which is what
+    // lets showMainWindow() bring the launcher back unchanged after the game.
+    if (m_mainWindow)
+        m_mainWindow->hide();
 }
 
 ViewLogWindow* Application::showLogWindow()

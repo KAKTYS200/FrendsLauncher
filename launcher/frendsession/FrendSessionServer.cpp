@@ -113,14 +113,23 @@ void FrendSessionServer::handleConnection()
         auto* buffer = new QByteArray();
         connect(socket, &QTcpSocket::readyRead, this, [this, socket, buffer] {
             buffer->append(socket->readAll());
-            for (;;) {
-                const QByteArray request = completeRequest(*buffer);
-                if (request.isEmpty())
-                    return;
-                handleRequest(socket, request);
-            }
+
+            // Exactly one request per connection. Every reply carries
+            // "Connection: close", so responding tears the socket down, which
+            // frees this buffer through the destroyed() handler below. Looping
+            // here to look for a second request used to read that freed buffer:
+            // the game sends its session calls back to back, the heap got
+            // corrupted and the launcher died with 0xC0000005 shortly after
+            // Minecraft started.
+            const QByteArray request = completeRequest(*buffer);
+            if (request.isEmpty())
+                return;
+
+            handleRequest(socket, request);
         });
-        connect(socket, &QTcpSocket::disconnected, socket, [buffer] { delete buffer; });
+        // The buffer has to outlive the reply: disconnectFromHost() runs the
+        // reply path synchronously and the socket is only deleted afterwards.
+        connect(socket, &QObject::destroyed, this, [buffer] { delete buffer; });
         connect(socket, &QTcpSocket::disconnected, socket, &QTcpSocket::deleteLater);
     }
 }

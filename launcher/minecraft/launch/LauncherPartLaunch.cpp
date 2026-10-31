@@ -55,14 +55,18 @@ LauncherPartLaunch::LauncherPartLaunch(LaunchTask* parent)
     if (parent->instance()->settings()->get("CloseAfterLaunch").toBool()) {
         static const QRegularExpression s_settingUser(".*Setting user.+", QRegularExpression::CaseInsensitiveOption);
         std::shared_ptr<QMetaObject::Connection> connection{ new QMetaObject::Connection };
-        *connection =
-            connect(&m_process, &LoggedProcess::log, this, [connection](const QStringList& lines, [[maybe_unused]] MessageLevel level) {
-                qDebug() << lines;
-                if (lines.filter(s_settingUser).length() != 0) {
-                    APPLICATION->closeAllWindows();
-                    disconnect(*connection);
-                }
-            });
+        *connection = connect(&m_process, &LoggedProcess::log, this,
+                              [this, connection](const QStringList& lines, [[maybe_unused]] MessageLevel level) {
+                                  qDebug() << lines;
+                                  if (lines.filter(s_settingUser).length() != 0) {
+                                      // Hide, do not close: a closed window is gone for
+                                      // good, and the launcher could never come back
+                                      // after the game. A hidden one returns unchanged.
+                                      m_launcherHidden = true;
+                                      APPLICATION->hideMainWindow();
+                                      disconnect(*connection);
+                                  }
+                              });
     }
 
     connect(&m_process, &LoggedProcess::log, this, &LauncherPartLaunch::logLines);
@@ -162,10 +166,19 @@ void LauncherPartLaunch::executeTask()
 #endif
 }
 
+void LauncherPartLaunch::restoreLauncherWindow()
+{
+    if (!m_launcherHidden)
+        return;
+    m_launcherHidden = false;
+    APPLICATION->showMainWindow();
+}
+
 void LauncherPartLaunch::on_state(LoggedProcess::State state)
 {
     switch (state) {
         case LoggedProcess::FailedToStart: {
+            restoreLauncherWindow();
             //: Error message displayed if instace can't start
             const char* reason = QT_TR_NOOP("Could not launch Minecraft: %1");
             emit logLine(QString(reason).arg(m_process.errorString()), MessageLevel::Fatal);
@@ -174,16 +187,16 @@ void LauncherPartLaunch::on_state(LoggedProcess::State state)
         }
         case LoggedProcess::Aborted:
         case LoggedProcess::Crashed: {
+            restoreLauncherWindow();
             m_parent->setPid(-1);
             m_parent->instance()->setMinecraftRunning(false);
             emitFailed(tr("Game crashed."));
             return;
         }
         case LoggedProcess::Finished: {
-            auto instance = m_parent->instance();
-            if (instance->settings()->get("CloseAfterLaunch").toBool())
-                APPLICATION->showMainWindow();
-
+            // Comes back on a clean exit, a crash and a kill alike: the launcher
+            // must never stay hidden just because the game ended badly.
+            restoreLauncherWindow();
             m_parent->setPid(-1);
             m_parent->instance()->setMinecraftRunning(false);
             // if the exit code wasn't 0, report this as a crash
