@@ -87,6 +87,7 @@ flatbuild
 /*.png
 /*.py
 /*.log
+/*.sh
 /*.bat
 /*.bin
 /*.bak
