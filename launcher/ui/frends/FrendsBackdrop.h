@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include <QPixmap>
+#include <QString>
 #include <QWidget>
 
 class QPaintEvent;
@@ -69,7 +69,6 @@ class FrendsBackdrop : public QWidget {
     void paintShade(QPainter& painter);
 
     QTimer* m_timer = nullptr;
-    QPixmap m_frame;
     Mode m_mode = Orbit;
     /// Seconds since the animation started. Every position is a function of it,
     /// so the motion has no seam and never restarts.

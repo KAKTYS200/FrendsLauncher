@@ -49,18 +49,28 @@
 
 IconList::IconList(const QStringList& builtinPaths, const QString& path, QObject* parent) : QAbstractListModel(parent)
 {
-    QSet<QString> builtinNames;
+    QMap<QString, QString> builtinFiles;
 
-    // add builtin icons
-    for (const auto& builtinPath : builtinPaths) {
-        QDir instanceIcons(builtinPath);
+    // Add builtin icons. Remember the resource path of every key as well: the
+    // icon theme that happens to be selected (pe_colored, breeze, ...) has no
+    // instance icons at all, so relying on QIcon::fromTheme(key) alone left
+    // every tile with an empty square.
+    //
+    // The paths are walked from the largest size down, so a key keeps the
+    // sharpest file that exists for it: the scalable SVG when there is one,
+    // otherwise the 128x128 raster. The tiles draw the icon at ~56 px, which
+    // the 32x32 version would turn into a blurry smear.
+    for (auto pathIt = builtinPaths.crbegin(); pathIt != builtinPaths.crend(); ++pathIt) {
+        QDir instanceIcons(*pathIt);
         auto fileInfoList = instanceIcons.entryInfoList(QDir::Files, QDir::Name);
         for (const auto& fileInfo : fileInfoList) {
-            builtinNames.insert(fileInfo.completeBaseName());
+            const QString key = fileInfo.completeBaseName();
+            if (!builtinFiles.contains(key))
+                builtinFiles.insert(key, fileInfo.absoluteFilePath());
         }
     }
-    for (const auto& builtinName : builtinNames) {
-        addThemeIcon(builtinName);
+    for (auto it = builtinFiles.constBegin(); it != builtinFiles.constEnd(); ++it) {
+        addThemeIcon(it.key(), it.value());
     }
 
     m_watcher.reset(new QFileSystemWatcher());
@@ -377,10 +387,25 @@ bool IconList::trashIcon(const QString& key)
 
 bool IconList::addThemeIcon(const QString& key)
 {
+    return addThemeIcon(key, QString());
+}
+
+bool IconList::addThemeIcon(const QString& key, const QString& iconPath)
+{
+    // Load the builtin file straight from the resource. QIcon::fromTheme(key)
+    // is still used as a fallback below, but it only finds the icon when the
+    // selected theme carries instance icons, which most of them do not.
+    QIcon icon;
+    if (!iconPath.isEmpty())
+        icon = QIcon(iconPath);
+
     auto iter = m_nameIndex.find(key);
     if (iter != m_nameIndex.end()) {
         auto& oldOne = m_icons[*iter];
-        oldOne.replace(Builtin, key);
+        if (icon.isNull())
+            oldOne.replace(Builtin, key);
+        else
+            oldOne.replace(Builtin, icon, iconPath);
         dataChanged(index(*iter), index(*iter));
         return true;
     }
@@ -390,7 +415,10 @@ bool IconList::addThemeIcon(const QString& key)
         MMCIcon mmc_icon;
         mmc_icon.m_name = key;
         mmc_icon.m_key = key;
-        mmc_icon.replace(Builtin, key);
+        if (icon.isNull())
+            mmc_icon.replace(Builtin, key);
+        else
+            mmc_icon.replace(Builtin, icon, iconPath);
         m_icons.push_back(mmc_icon);
         m_nameIndex[key] = m_icons.size() - 1;
     }

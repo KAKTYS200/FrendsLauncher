@@ -219,30 +219,23 @@ void FrendsBackdrop::hideEvent(QHideEvent* event)
 void FrendsBackdrop::resizeEvent(QResizeEvent* event)
 {
     QWidget::resizeEvent(event);
-    m_frame = QPixmap();
+    update();
 }
 
 void FrendsBackdrop::paintEvent(QPaintEvent* event)
 {
     Q_UNUSED(event);
 
-    // A fifth of the window is enough: the smooth upscale is what softens the
-    // artwork, and it keeps the per-frame cost down.
-    const QSize small(qMax(48, width() / 5), qMax(48, height() / 5));
-    if (m_frame.size() != small)
-        m_frame = QPixmap(small);
-
-    m_frame.fill(Qt::transparent);
-    {
-        QPainter scenePainter(&m_frame);
-        scenePainter.setRenderHint(QPainter::Antialiasing, true);
-        paintScene(scenePainter, QRect(QPoint(0, 0), small), m_elapsed);
-    }
-
+    // Drawn straight into the widget at full resolution. An earlier version
+    // rendered into a fifth-size pixmap and scaled it back up to blur the
+    // artwork, but the smooth upscale turned the cube edges into mush; the
+    // scene is only a few dozen polygons, so there is no reason to trade
+    // sharpness for speed.
     QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing, true);
     painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
-    painter.drawPixmap(rect(), m_frame);
 
+    paintScene(painter, rect(), m_elapsed);
     paintShade(painter);
 }
 
@@ -370,6 +363,5 @@ void FrendsBackdrop::setMode(Mode mode)
     if (m_mode == mode)
         return;
     m_mode = mode;
-    m_frame = QPixmap();
     update();
 }

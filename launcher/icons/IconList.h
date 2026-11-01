@@ -67,6 +67,10 @@ class IconList : public QAbstractListModel {
     virtual Qt::ItemFlags flags(const QModelIndex& index) const override;
 
     bool addThemeIcon(const QString& key);
+    /// Registers a builtin icon together with the resource file it lives in.
+    /// Loading the file directly keeps the icons visible even when the
+    /// selected icon theme has no instance icons of its own.
+    bool addThemeIcon(const QString& key, const QString& iconPath);
     bool addIcon(const QString& key, const QString& name, const QString& path, IconType type);
     void saveIcon(const QString& key, const QString& path, const char* format) const;
     bool deleteIcon(const QString& key);

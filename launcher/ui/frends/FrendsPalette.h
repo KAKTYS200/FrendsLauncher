@@ -146,12 +146,14 @@ inline void buildLight(Colors& c)
     c.backdropShade = QColor(72, 92, 124, 30);
     c.vignette = QColor(60, 70, 90, 70);
 
-    c.card = QColor(255, 255, 255, 192);
-    c.cardBorder = QColor(255, 255, 255, 235);
+    c.card = QColor(255, 255, 255, 118);
+    c.cardBorder = QColor(255, 255, 255, 200);
 
-    c.panelTop = QColor(250, 251, 253, 236);
-    c.panelBottom = QColor(235, 238, 243, 232);
-    c.panelEdge = QColor(0, 0, 0, 30);
+    // Translucent enough that the animated cubes stay visible through the
+    // panels; opaque panels turned the whole window into a flat white sheet.
+    c.panelTop = QColor(250, 251, 253, 172);
+    c.panelBottom = QColor(235, 238, 243, 162);
+    c.panelEdge = QColor(0, 0, 0, 34);
 
     c.text = QColor(0x1E, 0x22, 0x28);
     c.textMuted = QColor(0, 0, 0, 140);
@@ -161,8 +163,8 @@ inline void buildLight(Colors& c)
     c.navActiveBottom = QColor(0xF2, 0xAF, 0x17);
     c.navHover = QColor(0, 0, 0, 18);
 
-    c.tile = QColor(255, 255, 255, 225);
-    c.tileBorder = QColor(0, 0, 0, 28);
+    c.tile = QColor(255, 255, 255, 178);
+    c.tileBorder = QColor(0, 0, 0, 34);
     c.tileSelectedTop = QColor(150, 208, 118, 245);
     c.tileSelectedBottom = QColor(110, 176, 82, 245);
     c.tileSelectedBorder = QColor(0x3E, 0x8F, 0x28);
@@ -171,7 +173,7 @@ inline void buildLight(Colors& c)
 
     c.field = QColor(255, 255, 255);
     c.fieldBorder = QColor(0, 0, 0, 45);
-    c.buttonPlate = QColor(255, 255, 255, 170);
+    c.buttonPlate = QColor(255, 255, 255, 150);
     c.buttonPlateBorder = QColor(0, 0, 0, 40);
     c.playTop = QColor(0xFF, 0xB3, 0x47);
     c.playBottom = QColor(0xF0, 0x7C, 0x1E);
