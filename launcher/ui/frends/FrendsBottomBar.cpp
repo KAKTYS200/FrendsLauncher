@@ -72,6 +72,10 @@ class UpwardComboBox : public QComboBox {
 QString comboStyle(qreal scale)
 {
     const auto& theme = FrendsTheme::colors();
+    // On the cool light bar a pure white field looks pasted on, so the field
+    // and its border are tinted to match the strip.
+    const QColor field = theme.dark ? theme.field : QColor(255, 255, 255, 236);
+    const QColor fieldBorder = theme.dark ? theme.fieldBorder : QColor(147, 163, 183, 165);
     return QStringLiteral(
                "QComboBox {"
                "  background: %9;"
@@ -113,9 +117,9 @@ QString comboStyle(qreal scale)
         .arg(qMax(8, int(qRound(10 * scale))))
         .arg(qMax(5, int(qRound(6 * scale))))
         .arg(qMax(4, int(qRound(6 * scale))))
-        .arg(theme.field.name())
+        .arg(field.name())
         .arg(theme.text.name())
-        .arg(FrendsTheme::css(theme.fieldBorder))
+        .arg(FrendsTheme::css(fieldBorder))
         .arg(FrendsTheme::css(theme.text))
         .arg(theme.navActiveTop.name())
         .arg(theme.textOnAccent.name());
@@ -126,6 +130,10 @@ QString iconButtonStyle(qreal scale)
     const auto& theme = FrendsTheme::colors();
     // Square, slightly raised plates: on the panel a bare glyph floats away
     // from the row, the plate gives it the same weight as the play button.
+    // On the light bar the reference shows the plates lighter than the strip
+    // they sit on, so they get their own near-white fill there.
+    const QColor plate = theme.dark ? theme.buttonPlate : QColor(255, 255, 255, 224);
+    const QColor plateBorder = theme.dark ? theme.buttonPlateBorder : QColor(150, 166, 186, 150);
     return QStringLiteral(
                "QToolButton {"
                "  background: %3;"
@@ -137,11 +145,11 @@ QString iconButtonStyle(qreal scale)
                "QToolButton:pressed { background: %7; }")
         .arg(qMax(4, int(qRound(6 * scale))))
         .arg(qMax(2, int(qRound(5 * scale))))
-        .arg(FrendsTheme::css(theme.buttonPlate))
-        .arg(FrendsTheme::css(theme.buttonPlateBorder))
-        .arg(FrendsTheme::css(theme.buttonPlate.lighter(135)))
+        .arg(FrendsTheme::css(plate))
+        .arg(FrendsTheme::css(plateBorder))
+        .arg(FrendsTheme::css(plate.lighter(135)))
         .arg(FrendsTheme::css(theme.text))
-        .arg(FrendsTheme::css(theme.buttonPlate.darker(115)));
+        .arg(FrendsTheme::css(plate.darker(112)));
 }
 }  // namespace
 
@@ -518,8 +526,8 @@ void FrendsBottomBar::styleWidgets(qreal scale)
                                     "QPushButton:pressed { background: %8; }")
                                     .arg(qMax(8, int(qRound(10 * scale))))
                                     .arg(qMax(4, int(qRound(7 * scale))))
-                                    .arg(FrendsTheme::css(theme.buttonPlate))
-                                    .arg(FrendsTheme::css(theme.buttonPlateBorder))
+                                    .arg(FrendsTheme::css(theme.dark ? theme.buttonPlate : QColor(255, 255, 255, 224)))
+                                    .arg(FrendsTheme::css(theme.dark ? theme.buttonPlateBorder : QColor(150, 166, 186, 150)))
                                     .arg(theme.text.name())
                                     .arg(FrendsTheme::css(theme.buttonPlate.lighter(135)))
                                     .arg(FrendsTheme::css(theme.text))
@@ -577,9 +585,16 @@ void FrendsBottomBar::paintEvent(QPaintEvent* event)
     const auto& theme = FrendsTheme::colors();
 
     QLinearGradient gradient(0, 0, 0, height());
-    gradient.setColorAt(0.0, theme.panelTop);
-    gradient.setColorAt(1.0, theme.panelBottom);
+    gradient.setColorAt(0.0, theme.barTop);
+    gradient.setColorAt(1.0, theme.barBottom);
     painter.fillRect(rect(), gradient);
+
+    // In the light theme the bar closes with a dark foot, which is what makes
+    // it read as a separate surface instead of blending into the content.
+    if (theme.barFoot.alpha() > 0) {
+        const int footHeight = qMax(3, FrendsScale::px(4, this));
+        painter.fillRect(QRect(0, height() - footHeight, width(), footHeight), theme.barFoot);
+    }
 
     // Hairline on top: the bar is a separate surface from the content above it.
     painter.fillRect(QRect(0, 0, width(), 1), theme.panelEdge);

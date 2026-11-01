@@ -56,6 +56,15 @@ struct Colors {
     QColor panelBottom;
     QColor panelEdge;
 
+    // The bottom bar has its own palette: in the light theme it is a cool
+    // blue-grey strip that ends in a dark foot, rather than the neutral sheet
+    // the sidebar uses.
+    QColor barTop;
+    QColor barBottom;
+    /// Dark strip along the bottom edge of the bar, drawn only when it has a
+    /// visible alpha.
+    QColor barFoot;
+
     // Text
     QColor text;
     QColor textMuted;
@@ -107,6 +116,11 @@ inline void buildDark(Colors& c)
     c.panelBottom = QColor(8, 10, 14, 220);
     c.panelEdge = QColor(255, 255, 255, 26);
 
+    // Dark theme keeps one surface for both bars.
+    c.barTop = c.panelTop;
+    c.barBottom = c.panelBottom;
+    c.barFoot = QColor(0, 0, 0, 0);
+
     c.text = QColor(0xE7, 0xE8, 0xEA);
     c.textMuted = QColor(255, 255, 255, 150);
     c.textOnAccent = QColor(0x3B, 0x2C, 0x00);
@@ -154,6 +168,12 @@ inline void buildLight(Colors& c)
     c.panelTop = QColor(250, 251, 253, 172);
     c.panelBottom = QColor(235, 238, 243, 162);
     c.panelEdge = QColor(0, 0, 0, 34);
+
+    // The bar follows the reference mock: a cool blue-grey that darkens
+    // downwards, closed by a dark foot, instead of the sidebar's white sheet.
+    c.barTop = QColor(230, 237, 248, 232);
+    c.barBottom = QColor(193, 203, 218, 236);
+    c.barFoot = QColor(48, 49, 50, 255);
 
     c.text = QColor(0x1E, 0x22, 0x28);
     c.textMuted = QColor(0, 0, 0, 140);
