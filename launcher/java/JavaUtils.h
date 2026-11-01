@@ -43,4 +43,14 @@ class JavaUtils : public QObject {
 
     static QString getJavaCheckPath();
     static const QString javaExecutable;
+
+    /**
+     * True when the java binary at this path can actually start.
+     *
+     * A managed runtime that was only half downloaded still has bin/java.exe,
+     * but its lib folder has no jvm.cfg. Starting such a binary makes the JVM
+     * pop its own "could not open ...\lib\jvm.cfg" box, which looks like a
+     * launcher crash, so such paths are rejected before anything is spawned.
+     */
+    static bool isRunnableJava(const QString& path);
 };

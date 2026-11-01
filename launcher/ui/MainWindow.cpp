@@ -728,6 +728,29 @@ void MainWindow::setupFrendsUi()
     ui->instanceToolBar->setVisible(false);
     ui->statusBar->setVisible(false);
 
+    // The backdrop used to live inside contentRow only, so the area behind the
+    // bottom bar was plain window background and the bar could not show the
+    // cubes through itself no matter how translucent it was. The scene is now
+    // painted on the central widget, which spans the whole window, and every
+    // container above it stays transparent.
+    const auto makeTransparent = [](QWidget* widget) {
+        widget->setAutoFillBackground(false);
+        widget->setAttribute(Qt::WA_NoSystemBackground, true);
+    };
+    makeTransparent(ui->centralWidget);
+    makeTransparent(ui->contentRow);
+    makeTransparent(ui->cardHost);
+    makeTransparent(ui->bottomBarHost);
+
+    // The scene goes in as a plain child of the central widget rather than as a
+    // layout entry, so it can be sized to the whole window and lowered beneath
+    // everything else. Sizing is kept in sync by an event filter on the host.
+    m_frendsBackdrop = new FrendsBackdrop(ui->centralWidget);
+    m_frendsBackdrop->setGeometry(ui->centralWidget->rect());
+    m_frendsBackdrop->lower();
+    m_frendsBackdrop->show();
+    ui->centralWidget->installEventFilter(this);
+
     view->setStyleSheet(QStringLiteral("QTreeView { background: transparent; border: none; color: #E7E8EC;"
                                        " selection-background-color: transparent; selection-color: #E7E8EC; }"));
     view->viewport()->setAutoFillBackground(false);
@@ -784,8 +807,13 @@ void MainWindow::setupFrendsUi()
             applyFrendsScale();
         else if (setting.id() == QLatin1String("ApplicationTheme"))
             applyFrendsTheme();
-        else if (setting.id() == QLatin1String("FrendsBackdrop"))
-            ui->contentRow->setMode(FrendsBackdrop::modeFromSettings());
+        else if (setting.id() == QLatin1String("FrendsBackdrop")) {
+            const auto mode = FrendsBackdrop::modeFromSettings();
+            if (m_frendsBackdrop)
+                m_frendsBackdrop->setMode(mode);
+            // Kept for the pages that still read the mode back from the view.
+            ui->contentRow->setProperty("backdropMode", FrendsBackdrop::settingValue(mode));
+        }
     });
 
     frendsSyncAccounts();
@@ -1508,6 +1536,13 @@ void MainWindow::defaultAccountChanged()
 
 bool MainWindow::eventFilter(QObject* obj, QEvent* ev)
 {
+    // The backdrop is a free-floating child of the central widget, so it has to
+    // follow the host's size by hand.
+    if (m_frendsBackdrop && obj == ui->centralWidget && ev->type() == QEvent::Resize) {
+        m_frendsBackdrop->setGeometry(ui->centralWidget->rect());
+        m_frendsBackdrop->lower();
+    }
+
     // Easter egg: type jeb_ into any text field and press Enter to wash the
     // launcher in a slow rainbow, the way a sheep named jeb_ turns rainbow.
     if (ev->type() == QEvent::KeyPress) {

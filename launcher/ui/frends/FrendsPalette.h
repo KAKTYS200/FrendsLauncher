@@ -89,8 +89,15 @@ struct Colors {
     QColor fieldBorder;
     QColor buttonPlate;
     QColor buttonPlateBorder;
+    /// The play button is green in both themes: it is the one action the whole
+    /// launcher exists for, and green reads as "go" without borrowing the
+    /// yellow brand accent used for selection.
     QColor playTop;
     QColor playBottom;
+    QColor playBorder;
+    /// Glyph colour of the small icon buttons on the bottom bar. The light bar
+    /// is a pale cool strip, so its glyphs are near-black there.
+    QColor barIcon;
 
     // Backdrop cubes
     QList<QColor> cubeColors;
@@ -141,8 +148,10 @@ inline void buildDark(Colors& c)
     c.fieldBorder = QColor(255, 255, 255, 32);
     c.buttonPlate = QColor(255, 255, 255, 16);
     c.buttonPlateBorder = QColor(255, 255, 255, 38);
-    c.playTop = QColor(0xFF, 0xB3, 0x47);
-    c.playBottom = QColor(0xF0, 0x7C, 0x1E);
+    c.playTop = QColor(0x6A, 0xD8, 0x5A);
+    c.playBottom = QColor(0x2F, 0x9B, 0x2A);
+    c.playBorder = QColor(0x24, 0x7A, 0x1F);
+    c.barIcon = QColor(0xE7, 0xE8, 0xEA);
 
     c.cubeColors = { QColor(126, 78, 168), QColor(196, 84, 132), QColor(88, 74, 140),
                      QColor(232, 146, 120), QColor(108, 62, 140) };
@@ -171,9 +180,11 @@ inline void buildLight(Colors& c)
 
     // The bar follows the reference mock: a cool blue-grey that darkens
     // downwards, closed by a dark foot, instead of the sidebar's white sheet.
-    c.barTop = QColor(230, 237, 248, 232);
-    c.barBottom = QColor(193, 203, 218, 236);
-    c.barFoot = QColor(48, 49, 50, 255);
+    // It is kept slightly translucent so the animated backdrop stays faintly
+    // visible behind it, without letting the labels lose their contrast.
+    c.barTop = QColor(230, 237, 248, 198);
+    c.barBottom = QColor(193, 203, 218, 208);
+    c.barFoot = QColor(48, 49, 50, 236);
 
     c.text = QColor(0x1E, 0x22, 0x28);
     c.textMuted = QColor(0, 0, 0, 140);
@@ -195,8 +206,10 @@ inline void buildLight(Colors& c)
     c.fieldBorder = QColor(0, 0, 0, 45);
     c.buttonPlate = QColor(255, 255, 255, 150);
     c.buttonPlateBorder = QColor(0, 0, 0, 40);
-    c.playTop = QColor(0xFF, 0xB3, 0x47);
-    c.playBottom = QColor(0xF0, 0x7C, 0x1E);
+    c.playTop = QColor(0x63, 0xD4, 0x53);
+    c.playBottom = QColor(0x27, 0x8E, 0x24);
+    c.playBorder = QColor(0x1E, 0x6E, 0x1B);
+    c.barIcon = QColor(0x1B, 0x1F, 0x24);
 
     c.cubeColors = { QColor(122, 158, 202), QColor(176, 132, 180), QColor(126, 152, 192),
                      QColor(212, 152, 118), QColor(128, 166, 142) };

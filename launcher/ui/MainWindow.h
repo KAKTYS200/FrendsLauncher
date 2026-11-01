@@ -64,6 +64,7 @@ class InstanceTask;
 class LabeledToolButton;
 class FrendsSidebar;
 class FrendsBottomBar;
+class FrendsBackdrop;
 class FrendsServersPage;
 class FrendsCreatePage;
 class QStackedWidget;
@@ -282,6 +283,9 @@ class MainWindow : public QMainWindow {
 
     FrendsSidebar* m_frendsSidebar = nullptr;
     FrendsBottomBar* m_frendsBottomBar = nullptr;
+    /// The animated scene, kept as a full-window layer under the whole layout
+    /// so it is visible behind the translucent bars as well.
+    FrendsBackdrop* m_frendsBackdrop = nullptr;
     FrendsServersPage* m_serversPage = nullptr;
     FrendsCreatePage* m_createPage = nullptr;
     QStackedWidget* m_contentStack = nullptr;

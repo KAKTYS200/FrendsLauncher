@@ -34,6 +34,7 @@ class QPushButton;
 class QStackedWidget;
 class QVBoxLayout;
 class CustomPage;
+class FrendsServerDialog;
 class InstanceTask;
 class ProviderTile;
 
@@ -85,6 +86,8 @@ class FrendsCreatePage : public QWidget, public InstanceCreationSink {
     void addProviderTile(const QString& title, const QString& subtitle, const QColor& accent, bool highlighted,
                          const QIcon& icon = QIcon());
     QWidget* buildCurseForgeStub();
+    /// Opens the server window, creating it on first use and reusing it after.
+    void openServerDialog();
 
     QVBoxLayout* m_layout = nullptr;
     QHBoxLayout* m_tileRow = nullptr;
@@ -96,6 +99,8 @@ class FrendsCreatePage : public QWidget, public InstanceCreationSink {
     QLineEdit* m_nameEdit = nullptr;
     QPushButton* m_installButton = nullptr;
     QPushButton* m_cancelButton = nullptr;
+    QPushButton* m_serverButton = nullptr;
+    FrendsServerDialog* m_serverDialog = nullptr;
 
     CustomPage* m_form = nullptr;
     /// The page behind each card; null where a card has none of its own.

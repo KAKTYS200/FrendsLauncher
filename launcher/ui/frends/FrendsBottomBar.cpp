@@ -26,6 +26,7 @@
 #include <QLabel>
 #include <QLinearGradient>
 #include <QPainter>
+#include <QPixmap>
 #include <QApplication>
 #include <QProgressBar>
 #include <QScopedValueRollback>
@@ -148,8 +149,46 @@ QString iconButtonStyle(qreal scale)
         .arg(FrendsTheme::css(plate))
         .arg(FrendsTheme::css(plateBorder))
         .arg(FrendsTheme::css(plate.lighter(135)))
-        .arg(FrendsTheme::css(theme.text))
+        .arg(FrendsTheme::css(theme.barIcon))
         .arg(FrendsTheme::css(plate.darker(112)));
+}
+
+/// Recolours a template glyph to a flat colour.
+///
+/// The bundled icon themes ship one SVG per colour (`flat` is grey, `flat_white`
+/// is white), and neither is dark enough for the pale bottom bar. Rather than
+/// add a third theme for four glyphs, the white template is painted with the
+/// wanted colour through SourceIn, which keeps the antialiased edges.
+QIcon tintedGlyph(const QString& name, const QColor& color)
+{
+    const QPixmap source(QStringLiteral(":/icons/flat_white/scalable/%1.svg").arg(name));
+    if (source.isNull())
+        return QIcon();
+
+    QPixmap out(source.size() * 3);
+    out.fill(Qt::transparent);
+    out.setDevicePixelRatio(3.0);
+
+    QPainter painter(&out);
+    painter.drawPixmap(QRect(QPoint(0, 0), source.size()), source);
+    painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
+    painter.fillRect(QRect(QPoint(0, 0), source.size()), color);
+    painter.end();
+
+    return QIcon(out);
+}
+
+/// The glyph a bottom-bar icon button shows: the bundled white template in the
+/// dark theme, the same shape repainted near-black in the light one.
+QIcon barGlyph(const QString& name, QStyle::StandardPixmap fallback)
+{
+    if (!FrendsTheme::colors().dark) {
+        const QIcon dark = tintedGlyph(name, FrendsTheme::colors().barIcon);
+        if (!dark.isNull())
+            return dark;
+    }
+    QIcon icon(QStringLiteral(":/icons/flat_white/scalable/%1.svg").arg(name));
+    return icon.isNull() ? QApplication::style()->standardIcon(fallback) : icon;
 }
 }  // namespace
 
@@ -241,15 +280,14 @@ FrendsBottomBar::FrendsBottomBar(QWidget* parent) : QWidget(parent)
     m_layout->addWidget(m_modsButton);
 
     // White glyphs of the bundled icon theme, so the buttons read clearly on
-    // the green panel instead of the thin style defaults.
-    auto themedIcon = [](const QString& name, QStyle::StandardPixmap fallback) {
-        QIcon icon(QStringLiteral(":/icons/flat_white/scalable/%1.svg").arg(name));
-        return icon.isNull() ? QApplication::style()->standardIcon(fallback) : icon;
-    };
-
-    auto makeIconButton = [this, &themedIcon](const QString& name, QStyle::StandardPixmap fallback) {
+    // the green panel instead of the thin style defaults. The light theme has
+    // a pale bar instead, and there the glyphs are painted near-black; that is
+    // re-applied by styleWidgets() when the theme changes.
+    auto makeIconButton = [this](const QString& name, QStyle::StandardPixmap fallback) {
         auto* button = new QToolButton(this);
-        button->setIcon(themedIcon(name, fallback));
+        button->setProperty("frendsGlyph", name);
+        button->setProperty("frendsFallback", int(fallback));
+        button->setIcon(barGlyph(name, fallback));
         button->setCursor(Qt::PointingHandCursor);
         // These buttons carry only a glyph, so nothing sets their text and a
         // screen reader (or UI automation) would see four nameless buttons.
@@ -486,19 +524,19 @@ void FrendsBottomBar::styleWidgets(qreal scale)
                                      .arg(theme.field.name())
                                      .arg(theme.navActiveTop.name()));
 
-    // The one button the whole launcher exists for, so it carries the warm
-    // accent instead of the flat plate the others use.
+    // The one button the whole launcher exists for, so it carries the green
+    // accent in both themes instead of the flat plate the others use.
     m_playButton->setStyleSheet(QStringLiteral(
                                     "QPushButton {"
                                     "  background: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 %3, stop:1 %4);"
                                     "  color: #ffffff;"
-                                    "  border: 1px solid rgba(255, 255, 255, 60);"
+                                    "  border: 1px solid %11;"
                                     "  border-radius: %2px;"
                                     "  font-size: %1px;"
                                     "  font-weight: 700;"
                                     "}"
                                     "QPushButton:hover { background: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 %5, "
-                                    "stop:1 %6); }"
+                                    "stop:1 %6); border: 1px solid %12; }"
                                     "QPushButton:pressed { background: %7; }"
                                     "QPushButton:disabled { background: %8; color: %9; border: 1px solid %10; }")
                                     .arg(qMax(10, int(qRound(15 * scale))))
@@ -510,7 +548,9 @@ void FrendsBottomBar::styleWidgets(qreal scale)
                                     .arg(theme.playBottom.darker(112).name())
                                     .arg(FrendsTheme::css(theme.buttonPlate))
                                     .arg(FrendsTheme::css(theme.textMuted))
-                                    .arg(FrendsTheme::css(theme.buttonPlateBorder)));
+                                    .arg(FrendsTheme::css(theme.buttonPlateBorder))
+                                    .arg(FrendsTheme::css(theme.playBorder))
+                                    .arg(theme.playBorder.lighter(120).name()));
 
     m_modsButton->setStyleSheet(QStringLiteral(
                                     "QPushButton {"
@@ -533,8 +573,14 @@ void FrendsBottomBar::styleWidgets(qreal scale)
                                     .arg(FrendsTheme::css(theme.text))
                                     .arg(FrendsTheme::css(theme.buttonPlate.darker(115))));
 
-    for (auto* button : { m_refreshButton, m_launcherUpdateButton, m_folderButton, m_settingsButton })
+    for (auto* button : { m_refreshButton, m_launcherUpdateButton, m_folderButton, m_settingsButton }) {
         button->setStyleSheet(iconButtonStyle(scale));
+        // The glyph itself is a pixmap, so the sheet cannot recolour it; it is
+        // repainted here, which also covers a switch to the light theme.
+        const QString name = button->property("frendsGlyph").toString();
+        if (!name.isEmpty())
+            button->setIcon(barGlyph(name, QStyle::StandardPixmap(button->property("frendsFallback").toInt())));
+    }
 }
 
 void FrendsBottomBar::retranslate()

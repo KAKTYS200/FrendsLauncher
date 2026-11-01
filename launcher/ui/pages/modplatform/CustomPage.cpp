@@ -142,6 +142,14 @@ CustomPage::CustomPage(InstanceCreationSink* creationSink, QWidget* parent)
 
     applyStyle();
 
+    // A plain QWidget ignores a background from the style sheet unless it is
+    // told to paint it: without these flags the two cards were invisible and
+    // the whole form looked like one flat white sheet.
+    for (auto* panel : { ui->leftCard, ui->rightCard, ui->body }) {
+        if (panel)
+            panel->setAttribute(Qt::WA_StyledBackground, true);
+    }
+
     for (const auto& loader : s_loaders) {
         ui->loaderTypeCombo->addItem(tr(loader.label), QString::fromLatin1(loader.uid ? loader.uid : ""));
     }
@@ -182,10 +190,24 @@ void CustomPage::applyStyle()
     // "modena" text-button spec of that same source: grey gradient, 1 px
     // #b9b9b9 border, 4 px radius, #333333 text.
     setStyleSheet(QStringLiteral(
-        "QWidget#CustomPage { background: #ECECEC; }"
-        "QWidget#body { background: #ECECEC; }"
-        "QLabel { color: #585858; font-size: 13px; }"
-        "QLabel#headerLabel { color: #FFFFFF; font-size: 18px; font-weight: 700; padding-left: 18px; }"
+        // The page itself is transparent: it sits on the launcher's own
+        // backdrop, and an opaque sheet here would hide the animated cubes
+        // behind the whole window.
+        "QWidget#CustomPage { background: transparent; }"
+        // A faint cool wash over the whole form. The content area of the main
+        // window is already a bright white sheet, and cards drawn on it had no
+        // edge at all: darkening the page behind them is what makes the two
+        // panels read as panels, the way they do in the mock.
+        "QWidget#body { background: rgba(200, 213, 229, 200); }"
+        // Two floating cards instead of one flat sheet, matching the mock: the
+        // version list on the left and the settings on the right. The fill is
+        // the mock's own #E7EBF2, so the cards sit a shade cooler than the
+        // launcher's white sheet and read as separate panels.
+        "QWidget#leftCard, QWidget#rightCard { background: rgba(230, 235, 242, 244);"
+        " border: 1px solid rgba(255, 255, 255, 210); border-radius: 6px; }"
+        "QWidget#optionsCard { background: transparent; }"
+        "QLabel { color: #585858; font-size: 13px; background: transparent; }"
+        "QLabel#headerLabel { color: #2F3A45; font-size: 17px; font-weight: 800; }"
         "QLabel#minecraftListLabel { font-weight: 700; color: #585858; }"
         "QLabel#nameLabel, QLabel#loaderTypeLabel, QLabel#loaderVersionLabel, QLabel#gameVersionLabel,"
         " QLabel#loaderListLabel { font-weight: 700; color: #585858; }"

@@ -554,7 +554,13 @@ QStringList getMinecraftJavaBundle()
             }
         }
     }
-    return javas;
+
+    QStringList usable;
+    for (const auto& java : javas) {
+        if (JavaUtils::isRunnableJava(java))
+            usable.append(java);
+    }
+    return usable;
 }
 
 #if defined(Q_OS_WIN32)
@@ -584,5 +590,43 @@ QStringList getPrismJavaBundle()
 
     scanJavaDir(APPLICATION->javaPath());
 
-    return javas;
+    // A runtime that was downloaded halfway has a binary but no libraries;
+    // offering it only produces the JVM's own error box later.
+    QStringList usable;
+    for (const auto& java : javas) {
+        if (JavaUtils::isRunnableJava(java))
+            usable.append(java);
+    }
+    return usable;
+}
+
+bool JavaUtils::isRunnableJava(const QString& path)
+{
+    QFileInfo binary(path);
+    if (!binary.exists() || !binary.isFile())
+        return false;
+
+#ifndef Q_OS_WIN
+    // On Linux and macOS a missing interpreter shows up as a plain start
+    // failure, which the checker already reports properly.
+    return true;
+#else
+    // A real JVM keeps jvm.cfg next to its libraries: either directly in lib
+    // (modern JDKs) or in an architecture subfolder (older JREs).
+    const QDir home(binary.absoluteDir().absoluteFilePath(QStringLiteral("..")));
+    const QDir lib(home.absoluteFilePath(QStringLiteral("lib")));
+    if (!lib.exists())
+        return true;  // unusual layout, not worth second-guessing
+
+    if (QFileInfo::exists(lib.absoluteFilePath(QStringLiteral("jvm.cfg"))))
+        return true;
+
+    for (const auto& arch : lib.entryList(QDir::Dirs | QDir::NoDotAndDotDot)) {
+        if (QFileInfo::exists(lib.absoluteFilePath(arch + QStringLiteral("/jvm.cfg"))))
+            return true;
+    }
+
+    qWarning() << "Rejecting incomplete Java runtime, lib/jvm.cfg is missing:" << path;
+    return false;
+#endif
 }

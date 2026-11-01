@@ -32,6 +32,7 @@
 
 #include "Application.h"
 #include "FrendsScale.h"
+#include "FrendsServerDialog.h"
 #include "InstanceTask.h"
 #include "icons/IconList.h"
 #include "settings/SettingsObject.h"
@@ -238,14 +239,27 @@ FrendsCreatePage::FrendsCreatePage(QWidget* parent) : QWidget(parent)
     m_layout->setSpacing(10);
     m_layout->setContentsMargins(0, 0, 0, 0);
 
-    // Header: what this page is for, in two short lines.
+    // Header: what this page is for, in two short lines, plus the server
+    // shortcut — a server is a build too, and it is made right here.
     auto* header = new QVBoxLayout();
     header->setSpacing(2);
     m_title = new QLabel(this);
     m_subtitle = new QLabel(this);
     header->addWidget(m_title);
     header->addWidget(m_subtitle);
-    m_layout->addLayout(header);
+
+    m_serverButton = new QPushButton(this);
+    m_serverButton->setCursor(Qt::PointingHandCursor);
+    m_serverButton->setObjectName("serverButton");
+
+    auto* headerRow = new QHBoxLayout();
+    headerRow->setSpacing(10);
+    headerRow->addLayout(header);
+    headerRow->addStretch(1);
+    headerRow->addWidget(m_serverButton, 0, Qt::AlignVCenter);
+    m_layout->addLayout(headerRow);
+
+    connect(m_serverButton, &QPushButton::clicked, this, &FrendsCreatePage::openServerDialog);
 
     // The sources, as cards.
     m_tileRow = new QHBoxLayout();
@@ -375,6 +389,19 @@ void FrendsCreatePage::addProviderTile(const QString& title, const QString& subt
     m_tiles.push_back(tile);
 }
 
+void FrendsCreatePage::openServerDialog()
+{
+    if (!m_serverDialog) {
+        m_serverDialog = new FrendsServerDialog(this);
+        // The window outlives a single click: a running server keeps printing
+        // its console into it, so it is hidden rather than destroyed.
+        m_serverDialog->setAttribute(Qt::WA_DeleteOnClose, false);
+    }
+    m_serverDialog->show();
+    m_serverDialog->raise();
+    m_serverDialog->activateWindow();
+}
+
 QWidget* FrendsCreatePage::buildCurseForgeStub()
 {
     auto* page = new QWidget(this);
@@ -478,6 +505,8 @@ void FrendsCreatePage::retranslate()
     }
     if (m_nameLabel)
         m_nameLabel->setText(tr("Название сборки"));
+    if (m_serverButton)
+        m_serverButton->setText(tr("Создать сервер"));
     if (m_installButton)
         m_installButton->setText(tr("Установить сборку"));
     if (m_cancelButton)
@@ -503,6 +532,20 @@ void FrendsCreatePage::applyScale()
     }
     for (auto* tile : m_tiles)
         tile->setFixedHeight(tileHeight);
+
+    if (m_serverButton) {
+        m_serverButton->setStyleSheet(
+            QStringLiteral(
+                "QPushButton#serverButton { background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #FF8A4C,"
+                " stop:1 #E0491B); color: #FFFFFF; border: 1px solid #C94316; border-radius: 5px; font-size: %1px;"
+                " font-weight: 700; padding: 6px 16px; }"
+                "QPushButton#serverButton:hover { background: qlineargradient(x1:0, y1:0, x2:0, y2:1,"
+                " stop:0 #FFA068, stop:1 #EE5A26); }"
+                "QPushButton#serverButton:pressed { background: qlineargradient(x1:0, y1:0, x2:0, y2:1,"
+                " stop:0 #E0491B, stop:1 #C94316); }")
+                .arg(bodyFont));
+        m_serverButton->setFixedHeight(buttonHeight);
+    }
 
     if (m_hint) {
         m_hint->setStyleSheet(

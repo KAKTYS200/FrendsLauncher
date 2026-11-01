@@ -62,6 +62,20 @@ void JavaChecker::executeTask()
 
     QStringList args;
 
+    // Starting a half-downloaded runtime does not fail quietly: the JVM itself
+    // opens an "Error: could not open ...\lib\jvm.cfg" window, which players
+    // read as a launcher bug. Refuse it here instead.
+    if (!JavaUtils::isRunnableJava(m_path)) {
+        qDebug() << "Java checker: incomplete runtime, not starting it:" << m_path;
+        Result broken{ m_path, m_id };
+        broken.errorLog = tr("Этот рантайм Java скачан не полностью (нет lib/jvm.cfg). "
+                             "Удалите его в настройках и установите заново.");
+        broken.validity = Result::Validity::Errored;
+        emit checkFinished(broken);
+        emitSucceeded();
+        return;
+    }
+
     process.reset(new QProcess());
     if (m_args.size()) {
         auto extraArgs = Commandline::splitArgs(m_args);
