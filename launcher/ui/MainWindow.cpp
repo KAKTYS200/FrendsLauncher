@@ -1074,6 +1074,7 @@ void MainWindow::frendsPlayClicked()
         } else {
             m_frendsLaunchTask = nullptr;
             m_frendsLaunching = false;
+            m_frendsLaunchPending = false;
             frendsUpdateInstanceState();
         }
         if (m_selectedInstance->isRunning())
@@ -1094,8 +1095,22 @@ void MainWindow::frendsPlayClicked()
             // while the download is still running is exactly what makes
             // Minecraft report missing libraries.
             connect(task, &Task::succeeded, this, [this, instance] {
-                if (instance == m_selectedInstance)
-                    APPLICATION->launch(instance);
+                if (instance == m_selectedInstance) {
+                    // Prevent the finished() handler of this update task from
+                    // resetting the button: launch() queues the controller
+                    // start on the event loop, so launchTaskChanged arrives
+                    // only on the next pass.
+                    m_frendsLaunchPending = true;
+                    if (!APPLICATION->launch(instance)) {
+                        // launch() refused (canLaunch false, window save
+                        // failed, etc.) — no LaunchController will be
+                        // created, so clear the flag and the button now.
+                        m_frendsLaunchPending = false;
+                        m_frendsLaunchTask = nullptr;
+                        m_frendsLaunching = false;
+                        frendsUpdateInstanceState();
+                    }
+                }
             });
 
             frendsSetLaunching(task);
@@ -1105,7 +1120,14 @@ void MainWindow::frendsPlayClicked()
         }
     }
 
-    APPLICATION->launch(instance);
+    // No update needed (or checkbox off): launch directly. The
+    // LaunchController is queued on the event loop, so launchTaskChanged
+    // arrives one pass later — set the flag now so the button flips
+    // immediately.
+    m_frendsLaunchPending = true;
+    if (!APPLICATION->launch(instance)) {
+        m_frendsLaunchPending = false;
+    }
 }
 
 void MainWindow::frendsAccountActivated(int index)
@@ -1395,8 +1417,16 @@ void MainWindow::frendsSetLaunching(Task* task)
         connect(task, &Task::finished, this, [this, task] {
             if (m_frendsLaunchTask != task)
                 return;
+            // The update task succeeded and APPLICATION->launch() was just
+            // called — the LaunchController will emit launchTaskChanged on
+            // the next event loop pass, and that re-enters frendsSetLaunching.
+            // Resetting here would flip the button back to "Войти в игру"
+            // for one frame, which is exactly the bug we're fixing.
+            if (m_frendsLaunchPending)
+                return;
             m_frendsLaunchTask = nullptr;
             m_frendsLaunching = false;
+            m_frendsLaunchPending = false;
             frendsUpdateInstanceState();
         });
     }
@@ -2572,6 +2602,7 @@ void MainWindow::instanceChanged(const QModelIndex& current, [[maybe_unused]] co
         // The launch task shows up the moment the game is about to start; from
         // then on the play button doubles as a stop button.
         connect(m_selectedInstance, &BaseInstance::launchTaskChanged, this, [this](LaunchTask* task) {
+            m_frendsLaunchPending = false;
             if (!task || m_frendsLaunchTask == task)
                 return;
             frendsSetLaunching(task);

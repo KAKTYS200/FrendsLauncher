@@ -301,6 +301,10 @@ class MainWindow : public QMainWindow {
     /// The task that is currently preparing the launch, so the stop button can
     /// abort it before the JVM exists.
     Task* m_frendsLaunchTask = nullptr;
+    /// Set when the update task succeeded and APPLICATION->launch() was just
+    /// called: the LaunchController has not emitted launchTaskChanged yet, so
+    /// the finished() handler of the update task must NOT reset the button.
+    bool m_frendsLaunchPending = false;
     qreal m_lastFrendsScale = -1.0;
     /// True while applyFrendsTheme() is running. Setting a stylesheet sends
     /// StyleChange, which comes straight back into changeEvent(); without this
