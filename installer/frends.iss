@@ -8,8 +8,8 @@
 [Setup]
 AppId={{8E4C1F62-7B1A-4E0D-9C2B-FRENDS0001}
 AppName=Frends Launcher
-AppVersion=1.1
-AppVerName=Frends Launcher 1.1
+AppVersion=1.2
+AppVerName=Frends Launcher 1.2
 AppPublisher=Frends Launcher
 AppPublisherURL=https://github.com/KAKTYS200/FrendsLauncher
 AppSupportURL=https://github.com/KAKTYS200/FrendsLauncher
@@ -18,10 +18,10 @@ DefaultDirName={autopf}\Frends Launcher
 DefaultGroupName=Frends Launcher
 DisableProgramGroupPage=yes
 OutputDir=..\dist
-OutputBaseFilename=FrendsLauncher-1.1-setup
+OutputBaseFilename=FrendsLauncher-1.2-setup
 SetupIconFile=..\program_info\frendslauncher.ico
 UninstallDisplayIcon={app}\frendslauncher.exe
-UninstallDisplayName=Frends Launcher 1.1
+UninstallDisplayName=Frends Launcher 1.2
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
