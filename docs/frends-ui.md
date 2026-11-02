@@ -1,7 +1,11 @@
 # Интерфейс Frends Launcher — выжимка для портирования
 
-Источник: `C:\Users\legion\AppData\Roaming\.tlauncher\starter\original-TLauncher-2.9374.jar`
-(распакован в `C:\Users\legion\AppData\Local\Temp\opencode\tl\tl`).
+> Это рабочий документ, а не руководство пользователя. Он фиксирует, откуда взяты
+> цвета, метрики и раскладка интерфейса, чтобы при переносе правок из TLauncher
+> не подбирать их заново. Пользовательская документация — в [README](../README.md).
+
+Источник: распакованный `original-TLauncher-2.9374.jar` из папки `.tlauncher/starter`
+(на момент разбора — версия 2.9374).
 Технология оригинала: Java Swing/JavaFX, стили в `css/style.css` (в основном base64-шрифты, реальной вёрстки мало),
 все строки в `lang/loc/*.properties`, иконки рисуются кодом + 4 PNG в джарнике.
 
