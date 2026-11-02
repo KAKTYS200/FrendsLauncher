@@ -49,6 +49,7 @@
 #include <QtMath>
 
 #include "VisualGroup.h"
+#include "ui/themes/CatPainter.h"
 #include "ui/themes/ThemeManager.h"
 
 #include <Application.h>
@@ -71,6 +72,7 @@ InstanceView::InstanceView(QWidget* parent) : QAbstractItemView(parent)
     setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     setAcceptDrops(true);
     setAutoScroll(true);
+    setPaintCat(APPLICATION->settings()->get("TheCat").toBool());
     connect(verticalScrollBar(), &QScrollBar::valueChanged, viewport(), QOverload<>::of(&QWidget::update));
     connect(horizontalScrollBar(), &QScrollBar::valueChanged, viewport(), QOverload<>::of(&QWidget::update));
 }
@@ -79,6 +81,9 @@ InstanceView::~InstanceView()
 {
     qDeleteAll(m_groups);
     m_groups.clear();
+    if (m_cat) {
+        m_cat->deleteLater();
+    }
 }
 
 void InstanceView::setModel(QAbstractItemModel* model)
@@ -443,12 +448,18 @@ void InstanceView::setEmptyStateText(const QString& text)
     viewport()->update();
 }
 
-void InstanceView::setPaintCat([[maybe_unused]] bool visible)
+void InstanceView::setPaintCat(bool visible)
 {
-    // The cat artwork is gone for good: the tiles sit on a translucent content
-    // card, so the picture was never visible here anyway, and the painter kept
-    // a QMovie running that asked for a viewport repaint on every frame.
-    // The method stays so the settings signal keeps compiling.
+    if (m_cat) {
+        disconnect(m_cat, &CatPainter::updateFrame, this, nullptr);
+        delete m_cat;
+        m_cat = nullptr;
+    }
+    if (visible) {
+        m_cat = new CatPainter(APPLICATION->themeManager()->getCatPack(), this);
+        connect(m_cat, &CatPainter::updateFrame, this, [this] { viewport()->update(); });
+    }
+    viewport()->update();
 }
 
 void InstanceView::paintEvent([[maybe_unused]] QPaintEvent* event)
@@ -457,9 +468,11 @@ void InstanceView::paintEvent([[maybe_unused]] QPaintEvent* event)
 
     QPainter painter(this->viewport());
 
-    // The tiles sit on the translucent content card, so the CatPack artwork
-    // stays out of this view: it would show through the card and fight with
-    // the design. It still paints everywhere else the launcher uses it.
+    // The cat picture is the backdrop of the instance list: it is painted
+    // first so the group headers and the tiles sit on top of it. It only
+    // exists when the "Show the cat on the main screen" switch is on.
+    if (m_cat)
+        m_cat->paint(&painter, viewport()->rect());
 
     QStyleOptionViewItem option;
     initViewItemOption(&option);
