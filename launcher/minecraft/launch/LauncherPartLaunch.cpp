@@ -52,7 +52,10 @@ LauncherPartLaunch::LauncherPartLaunch(LaunchTask* parent)
     : LaunchStep(parent)
     , m_process(parent->instance()->getJavaVersion().defaultsToUtf8() ? QStringConverter::Utf8 : QStringConverter::System)
 {
-    if (parent->instance()->settings()->get("CloseAfterLaunch").toBool()) {
+    // The bottom bar switch wins over the per-instance "close after launch"
+    // setting: it is the one the player flips right before pressing play.
+    const bool keepLauncherOpen = APPLICATION->settings()->get("FrendsKeepLauncherOpen").toBool();
+    if (!keepLauncherOpen && parent->instance()->settings()->get("CloseAfterLaunch").toBool()) {
         static const QRegularExpression s_settingUser(".*Setting user.+", QRegularExpression::CaseInsensitiveOption);
         std::shared_ptr<QMetaObject::Connection> connection{ new QMetaObject::Connection };
         *connection = connect(&m_process, &LoggedProcess::log, this,

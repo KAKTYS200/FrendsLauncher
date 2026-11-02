@@ -19,9 +19,14 @@
 
 #include <QCheckBox>
 #include <QComboBox>
+#include <QDir>
+#include <QHash>
+#include <QPainterPath>
 #include <QScreen>
+#include <QStandardPaths>
 #include <QTimer>
 #include <QHBoxLayout>
+#include <QVBoxLayout>
 #include <QIcon>
 #include <QLabel>
 #include <QLinearGradient>
@@ -30,6 +35,7 @@
 #include <QApplication>
 #include <QProgressBar>
 #include <QScopedValueRollback>
+#include <QSignalBlocker>
 #include <QPushButton>
 #include <QStyle>
 #include <QToolButton>
@@ -69,6 +75,48 @@ class UpwardComboBox : public QComboBox {
         });
     }
 };
+
+/**
+ * A tick drawn into a small PNG so a stylesheet can use it as the checkbox
+ * indicator. Qt style sheets can only place a picture on the indicator, they
+ * cannot draw a glyph, and a plain coloured square is what made the update box
+ * look like a yellow sticker instead of a checkbox. The file is cached per
+ * colour and size, so restyling does not touch the disk again.
+ */
+QString checkMarkFile(const QColor& color, int size)
+{
+    static QHash<QString, QString> cache;
+    const QString key = QStringLiteral("%1_%2").arg(color.name()).arg(size);
+    const auto cached = cache.constFind(key);
+    if (cached != cache.constEnd())
+        return cached.value();
+
+    QPixmap pixmap(size, size);
+    pixmap.fill(Qt::transparent);
+
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    QPen pen(color);
+    pen.setWidthF(qMax(1.5, size / 7.0));
+    pen.setCapStyle(Qt::RoundCap);
+    pen.setJoinStyle(Qt::RoundJoin);
+    painter.setPen(pen);
+
+    QPainterPath path;
+    path.moveTo(size * 0.24, size * 0.53);
+    path.lineTo(size * 0.43, size * 0.71);
+    path.lineTo(size * 0.76, size * 0.30);
+    painter.drawPath(path);
+    painter.end();
+
+    const QString dir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + QStringLiteral("/frends-ui");
+    QDir().mkpath(dir);
+    const QString file = dir + QLatin1Char('/') + key + QStringLiteral(".png");
+    pixmap.save(file, "PNG");
+
+    cache.insert(key, file);
+    return file;
+}
 
 QString comboStyle(qreal scale)
 {
@@ -259,12 +307,28 @@ FrendsBottomBar::FrendsBottomBar(QWidget* parent) : QWidget(parent)
     });
     m_layout->addWidget(m_instanceCombo);
 
-    m_updateCheck = new QCheckBox(this);
+    // Both switches live in one column: side by side they would not fit the
+    // row at the base window width, and stacked they are exactly as tall as
+    // the play button.
+    auto* checkColumn = new QWidget(this);
+    auto* checkLayout = new QVBoxLayout(checkColumn);
+    checkLayout->setContentsMargins(0, 0, 0, 0);
+    checkLayout->setSpacing(FrendsScale::px(2, this));
+
+    m_updateCheck = new QCheckBox(checkColumn);
     m_updateCheck->setCursor(Qt::PointingHandCursor);
     // Checked by default: the launcher then downloads whatever is missing
     // before the game starts, instead of failing with missing libraries.
     m_updateCheck->setChecked(true);
-    m_layout->addWidget(m_updateCheck);
+    checkLayout->addWidget(m_updateCheck);
+
+    m_keepOpenCheck = new QCheckBox(checkColumn);
+    m_keepOpenCheck->setCursor(Qt::PointingHandCursor);
+    m_keepOpenCheck->setToolTip(tr("Не закрывать лаунчер при запуске игры"));
+    checkLayout->addWidget(m_keepOpenCheck);
+    connect(m_keepOpenCheck, &QCheckBox::toggled, this, &FrendsBottomBar::keepOpenToggled);
+
+    m_layout->addWidget(checkColumn);
 
     m_layout->addStretch(1);
 
@@ -511,18 +575,28 @@ void FrendsBottomBar::styleWidgets(qreal scale)
     m_instanceCombo->setStyleSheet(comboStyle(scale));
 
     const int indicator = qMax(10, int(qRound(14 * scale)));
-    m_updateCheck->setStyleSheet(QStringLiteral(
-                                     "QCheckBox { color: %4; font-size: %1px; spacing: %2px; background: transparent; }"
-                                     "QCheckBox::indicator { width: %3px; height: %3px; border: 1px solid %5;"
-                                     " background: %6; border-radius: 3px; }"
-                                     "QCheckBox::indicator:checked { background: %7; border: 1px solid %7; }")
-                                     .arg(qMax(8, fontSize - 1))
-                                     .arg(qRound(6 * scale))
-                                     .arg(indicator)
-                                     .arg(theme.text.name())
-                                     .arg(FrendsTheme::css(theme.fieldBorder))
-                                     .arg(theme.field.name())
-                                     .arg(theme.navActiveTop.name()));
+    // The tick is drawn in the accent's own ink colour, so it stays readable
+    // on the yellow box in both themes.
+    const QString checkMark = checkMarkFile(theme.textOnAccent, indicator);
+    const QString checkStyle =
+        QStringLiteral("QCheckBox { color: %4; font-size: %1px; spacing: %2px; background: transparent; }"
+                       "QCheckBox::indicator { width: %3px; height: %3px; border: 1px solid %5;"
+                       " background: %6; border-radius: 3px; }"
+                       "QCheckBox::indicator:hover { border: 1px solid %8; }"
+                       "QCheckBox::indicator:checked { background: %7; border: 1px solid %7;"
+                       " image: url(%9); }")
+            .arg(qMax(8, fontSize - 1))
+            .arg(qRound(6 * scale))
+            .arg(indicator)
+            .arg(theme.text.name())
+            .arg(FrendsTheme::css(theme.fieldBorder))
+            .arg(theme.field.name())
+            .arg(theme.navActiveTop.name())
+            .arg(theme.navActiveTop.name())
+            .arg(checkMark);
+    m_updateCheck->setStyleSheet(checkStyle);
+    if (m_keepOpenCheck)
+        m_keepOpenCheck->setStyleSheet(checkStyle);
 
     // The one button the whole launcher exists for, so it carries the green
     // accent in both themes instead of the flat plate the others use.
@@ -588,6 +662,11 @@ void FrendsBottomBar::retranslate()
     m_accountCombo->setToolTip(tr("Аккаунт"));
     m_instanceCombo->setToolTip(tr("Сборка"));
     m_updateCheck->setText(tr("Обновить клиент"));
+    if (m_keepOpenCheck) {
+        // Short label to keep the row narrow; the tooltip spells it out.
+        m_keepOpenCheck->setText(tr("Не закрывать лаунчер"));
+        m_keepOpenCheck->setToolTip(tr("Не закрывать лаунчер при запуске игры"));
+    }
     m_playButton->setText(m_running ? tr("Остановить") : tr("Войти в игру"));
     if (m_modsButton) {
         // The button opens the build tab now, so the label says what it does.
@@ -621,6 +700,14 @@ void FrendsBottomBar::setRunning(bool running)
 void FrendsBottomBar::setPlayEnabled(bool enabled)
 {
     m_playButton->setEnabled(enabled);
+}
+
+void FrendsBottomBar::setKeepOpen(bool keepOpen)
+{
+    if (!m_keepOpenCheck)
+        return;
+    const QSignalBlocker blocker(m_keepOpenCheck);
+    m_keepOpenCheck->setChecked(keepOpen);
 }
 
 void FrendsBottomBar::paintEvent(QPaintEvent* event)

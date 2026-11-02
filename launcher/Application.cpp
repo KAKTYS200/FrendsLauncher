@@ -828,6 +828,11 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         m_settings->registerSetting("CatOpacity", 100);
         m_settings->registerSetting("CatFit", "fit");
 
+        // Keep the launcher on screen after the game starts. Off by default:
+        // the window still hides itself, exactly as it did before the switch
+        // existed, so nobody's habits change by surprise.
+        m_settings->registerSetting("FrendsKeepLauncherOpen", false);
+
         m_settings->registerSetting("StatusBarVisible", true);
 
         m_settings->registerSetting("ToolbarsLocked", false);

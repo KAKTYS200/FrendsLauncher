@@ -36,9 +36,12 @@ class FrendsBottomBar : public QWidget {
     QComboBox* accountCombo() const { return m_accountCombo; }
     QComboBox* instanceCombo() const { return m_instanceCombo; }
     QCheckBox* updateCheckBox() const { return m_updateCheck; }
+    QCheckBox* keepOpenCheckBox() const { return m_keepOpenCheck; }
 
     void setRunning(bool running);
     void setPlayEnabled(bool enabled);
+    /// Reflects the stored preference without emitting keepOpenToggled().
+    void setKeepOpen(bool keepOpen);
     void retranslate();
 
     /// Recomputes every pixel metric from FrendsScale::factor().
@@ -61,6 +64,8 @@ class FrendsBottomBar : public QWidget {
     void addAccountRequested();
     /// The one-click launcher update button was pressed.
     void launcherUpdateRequested();
+    /// "Не закрывать лаунчер" was switched by the player.
+    void keepOpenToggled(bool keepOpen);
     void accountActivated(int index);
     void instanceActivated(const QString& id);
     /// The cancel button of the download strip was pressed.
@@ -82,6 +87,8 @@ class FrendsBottomBar : public QWidget {
     QComboBox* m_accountCombo = nullptr;
     QComboBox* m_instanceCombo = nullptr;
     QCheckBox* m_updateCheck = nullptr;
+    /// "Не закрывать лаунчер при запуске игры", stacked under the update box.
+    QCheckBox* m_keepOpenCheck = nullptr;
     QPushButton* m_playButton = nullptr;
     QPushButton* m_modsButton = nullptr;
     QToolButton* m_refreshButton = nullptr;

@@ -68,6 +68,7 @@ class FrendsBackdrop;
 class FrendsServersPage;
 class FrendsCreatePage;
 class QStackedWidget;
+class Task;
 
 namespace Ui {
 class MainWindow;
@@ -229,6 +230,10 @@ class MainWindow : public QMainWindow {
     void frendsAccountActivated(int index);
     void frendsInstanceActivated(const QString& id);
     void frendsUpdateInstanceState();
+    /// Marks the build as "being prepared" so the play button turns into a
+    /// stop button while the game is still starting, and resets it once the
+    /// task ends.
+    void frendsSetLaunching(Task* task);
     void frendsOpenMods();
     void frendsShowCreatePage();
     void frendsUpdateLauncher();
@@ -289,6 +294,13 @@ class MainWindow : public QMainWindow {
     FrendsServersPage* m_serversPage = nullptr;
     FrendsCreatePage* m_createPage = nullptr;
     QStackedWidget* m_contentStack = nullptr;
+    /// True from the moment play is pressed until the game reports itself
+    /// running (or the launch gives up), so the button can say "Остановить"
+    /// while the build is still being prepared.
+    bool m_frendsLaunching = false;
+    /// The task that is currently preparing the launch, so the stop button can
+    /// abort it before the JVM exists.
+    Task* m_frendsLaunchTask = nullptr;
     qreal m_lastFrendsScale = -1.0;
     /// True while applyFrendsTheme() is running. Setting a stylesheet sends
     /// StyleChange, which comes straight back into changeEvent(); without this

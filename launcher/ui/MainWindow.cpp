@@ -797,6 +797,13 @@ void MainWindow::setupFrendsUi()
             &MainWindow::on_actionManageAccounts_triggered);
     connect(m_frendsBottomBar, &FrendsBottomBar::instanceActivated, this, &MainWindow::frendsInstanceActivated);
 
+    // The switch is a shortcut for a global setting, so it is stored the
+    // moment it is flipped instead of waiting for a settings dialog.
+    connect(m_frendsBottomBar, &FrendsBottomBar::keepOpenToggled, this, [](bool keepOpen) {
+        APPLICATION->settings()->set("FrendsKeepLauncherOpen", keepOpen);
+    });
+    m_frendsBottomBar->setKeepOpen(APPLICATION->settings()->get("FrendsKeepLauncherOpen").toBool());
+
     connect(APPLICATION->accounts(), &AccountList::listChanged, this, &MainWindow::frendsSyncAccounts);
     connect(APPLICATION->accounts(), &AccountList::defaultAccountChanged, this, &MainWindow::frendsSyncAccounts);
     connect(APPLICATION->instances(), &InstanceList::instancesChanged, this, &MainWindow::frendsSyncInstances);
@@ -1059,8 +1066,18 @@ void MainWindow::frendsPlayClicked()
         return;
     }
 
-    if (m_selectedInstance->isRunning()) {
-        on_actionKillInstance_triggered();
+    if (m_selectedInstance->isRunning() || m_frendsLaunching) {
+        // One button, two meanings: kill the running game, or abort the launch
+        // while the build is still being downloaded and started.
+        if (m_frendsLaunchTask && m_frendsLaunchTask->isRunning()) {
+            m_frendsLaunchTask->abort();
+        } else {
+            m_frendsLaunchTask = nullptr;
+            m_frendsLaunching = false;
+            frendsUpdateInstanceState();
+        }
+        if (m_selectedInstance->isRunning())
+            on_actionKillInstance_triggered();
         return;
     }
 
@@ -1081,6 +1098,7 @@ void MainWindow::frendsPlayClicked()
                     APPLICATION->launch(instance);
             });
 
+            frendsSetLaunching(task);
             runTaskWithStrip(task);
             refreshInstances();
             return;
@@ -1354,10 +1372,36 @@ void MainWindow::frendsUpdateInstanceState()
     if (!m_frendsBottomBar)
         return;
 
+    // While the build is being prepared the process does not exist yet, so
+    // isRunning() is still false — but the player already pressed play and
+    // needs a way out, so the button shows "Остановить" for that whole time.
     const bool running = m_selectedInstance != nullptr && m_selectedInstance->isRunning();
-    m_frendsBottomBar->setRunning(running);
+    m_frendsBottomBar->setRunning(running || m_frendsLaunching);
     m_frendsBottomBar->setPlayEnabled(true);
     frendsSyncInstances();
+}
+
+void MainWindow::frendsSetLaunching(Task* task)
+{
+    m_frendsLaunching = true;
+    m_frendsLaunchTask = task;
+
+    if (task) {
+        // succeeded / failed / aborted all end here, so the button always
+        // comes back even when the launch gives up before the game starts.
+        // The reset is skipped when a newer task took over in the meantime:
+        // the update task finishing is followed straight away by the launch
+        // task being created.
+        connect(task, &Task::finished, this, [this, task] {
+            if (m_frendsLaunchTask != task)
+                return;
+            m_frendsLaunchTask = nullptr;
+            m_frendsLaunching = false;
+            frendsUpdateInstanceState();
+        });
+    }
+
+    frendsUpdateInstanceState();
 }
 
 void MainWindow::updateLaunchButton()
@@ -2503,6 +2547,7 @@ void MainWindow::instanceChanged(const QModelIndex& current, [[maybe_unused]] co
     if (m_selectedInstance) {
         disconnect(m_selectedInstance, &BaseInstance::runningStatusChanged, this, &MainWindow::refreshCurrentInstance);
         disconnect(m_selectedInstance, &BaseInstance::profilerChanged, this, &MainWindow::refreshCurrentInstance);
+        disconnect(m_selectedInstance, &BaseInstance::launchTaskChanged, this, nullptr);
     }
     QString id = current.data(InstanceList::InstanceIDRole).toString();
     m_selectedInstance = APPLICATION->instances()->getInstanceById(id);
@@ -2524,6 +2569,13 @@ void MainWindow::instanceChanged(const QModelIndex& current, [[maybe_unused]] co
 
         connect(m_selectedInstance, &BaseInstance::runningStatusChanged, this, &MainWindow::refreshCurrentInstance);
         connect(m_selectedInstance, &BaseInstance::profilerChanged, this, &MainWindow::refreshCurrentInstance);
+        // The launch task shows up the moment the game is about to start; from
+        // then on the play button doubles as a stop button.
+        connect(m_selectedInstance, &BaseInstance::launchTaskChanged, this, [this](LaunchTask* task) {
+            if (!task || m_frendsLaunchTask == task)
+                return;
+            frendsSetLaunching(task);
+        });
 
         frendsUpdateInstanceState();
     } else {
