@@ -56,6 +56,19 @@ class FrendsBackdrop : public QWidget {
     /// Switches the animation without restarting the clock.
     void setMode(Mode mode);
 
+    /**
+     * Pauses the animation while the launcher is busy.
+     *
+     * Every frame is a full-window repaint in the GUI thread, and that thread
+     * is also the one that has to react to a download or an unzip reporting
+     * progress. Ten thousand repaints in the middle of an install made the
+     * whole launcher feel stuck, so the backdrop stops moving until the work is
+     * done. The clock keeps running, so the cubes are exactly where they would
+     * have been when it resumes.
+     */
+    void setPaused(bool paused);
+    bool isPaused() const { return m_paused; }
+
    protected:
     void paintEvent(QPaintEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
@@ -70,6 +83,7 @@ class FrendsBackdrop : public QWidget {
 
     QTimer* m_timer = nullptr;
     Mode m_mode = Orbit;
+    bool m_paused = false;
     /// Seconds since the animation started. Every position is a function of it,
     /// so the motion has no seam and never restarts.
     qreal m_elapsed = 0.0;

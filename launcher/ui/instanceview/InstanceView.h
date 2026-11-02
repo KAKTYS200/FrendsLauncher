@@ -41,7 +41,6 @@
 #include <QScrollBar>
 #include <functional>
 #include "VisualGroup.h"
-#include "ui/themes/CatPainter.h"
 
 struct InstanceViewRoles {
     enum { GroupRole = Qt::UserRole, ProgressValueRole, ProgressMaximumRole };
@@ -132,7 +131,6 @@ class InstanceView : public QAbstractItemView {
     int m_currentItemsPerRow = -1;
     int m_currentCursorColumn = -1;
     mutable QCache<int, QRect> m_geometryCache;
-    CatPainter* m_cat = nullptr;
 
     /// Overrides the "no instances" overlay text; empty means the default one.
     QString m_emptyStateText;

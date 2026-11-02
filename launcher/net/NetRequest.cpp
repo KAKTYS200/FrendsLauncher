@@ -141,9 +141,22 @@ void NetRequest::onProgress(qint64 bytesReceived, qint64 bytesTotal)
 
     // use milliseconds for speed precision
     auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed);
+
+    // Qt reports progress for every chunk of data, which on a fast line is
+    // hundreds of times a second per file. Each report used to format two
+    // strings and emit two signals, and with six parallel downloads that
+    // flooded the event loop until the window stopped reacting. Updates are
+    // now limited to a handful per second, which is more than the eye reads.
+    const bool finished = bytesTotal > 0 && bytesReceived >= bytesTotal;
+    if (!finished && elapsed_ms.count() < 100)
+        return;
+
     auto bytes_received_since = bytesReceived - m_last_progress_bytes;
     auto dl_speed_bps = (double)bytes_received_since / elapsed_ms.count() * 1000;
-    auto remaining_time_s = (bytesTotal - bytesReceived) / dl_speed_bps;
+    auto remaining_time_s = dl_speed_bps > 0 ? (bytesTotal - bytesReceived) / dl_speed_bps : 0;
+
+    m_last_progress_time = now;
+    m_last_progress_bytes = bytesReceived;
 
     //: Current amount of bytes downloaded, out of the total amount of bytes in the download
     QString dl_progress =

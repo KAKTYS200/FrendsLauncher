@@ -179,6 +179,7 @@ void AppearanceWidget::applyCatEnabled(bool enabled)
 {
     APPLICATION->settings()->set("TheCat", enabled);
     APPLICATION->currentCatChanged(0);
+    updateCatPreview();
 }
 
 void AppearanceWidget::loadThemeSettings()
@@ -295,6 +296,13 @@ void AppearanceWidget::updateConsolePreview()
 
 void AppearanceWidget::updateCatPreview()
 {
+    // The picture follows the switch: with the cat turned off there is
+    // nothing to preview, so the button does not appear at all.
+    const bool catEnabled = m_ui->catEnabledCheckBox->isChecked();
+    m_ui->catPreview->setVisible(catEnabled);
+    if (!catEnabled)
+        return;
+
     QIcon catPackIcon(APPLICATION->themeManager()->getCatPack());
     m_ui->catPreview->setIcon(catPackIcon);
 

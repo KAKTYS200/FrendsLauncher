@@ -90,6 +90,7 @@
 #include <mutex>
 
 #include <QAccessible>
+#include <QElapsedTimer>
 #include <QCommandLineParser>
 #include <QDebug>
 #include <QDir>
@@ -249,8 +250,25 @@ void appDebugOutput(QtMsgType type, const QMessageLogContext& context, const QSt
     }
 
     out += QChar::LineFeed;
+    // The log file is not flushed on every line any more: each flush is a real
+    // write to disk, and a single modpack install produces tens of thousands of
+    // lines, which used to stall the unzip on a slow drive. Flushing at most
+    // once a second keeps the cost off the hot path while still leaving a
+    // usable log behind if the launcher is killed — losing a whole session's
+    // log on a crash would be a worse trade than a slightly stale file.
     APPLICATION->logFile->write(out.toUtf8());
-    APPLICATION->logFile->flush();
+    {
+        static QElapsedTimer sinceFlush;
+        static bool flushTimerStarted = false;
+        if (!flushTimerStarted) {
+            sinceFlush.start();
+            flushTimerStarted = true;
+        }
+        if (sinceFlush.elapsed() >= 1000) {
+            sinceFlush.restart();
+            APPLICATION->logFile->flush();
+        }
+    }
 
     if (isANSIColorConsole) {
         // format ansi for console;

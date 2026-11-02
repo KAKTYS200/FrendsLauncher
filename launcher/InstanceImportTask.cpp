@@ -210,6 +210,17 @@ void InstanceImportTask::extractFinished()
     QDir extractDir(m_stagingPath);
 
     qDebug() << "Fixing permissions for extracted pack files...";
+    // A large pack has tens of thousands of entries here, and on Windows the
+    // extracted files already carry the permissions the user needs, so the
+    // walk only reports what it actually changed. Writing one debug line per
+    // fixed file was enough to stall the UI on its own.
+    //
+    // The walk itself is skipped on Windows as well: it is a QFile::permissions
+    // call per entry (one syscall each, 10 000+ for a big pack) executed on the
+    // GUI thread right after the unzip, and POSIX rwx bits carry no meaning for
+    // NTFS ACLs anyway, so it cost seconds and changed nothing.
+#ifndef Q_OS_WIN
+    int fixed = 0;
     QDirIterator it(extractDir, QDirIterator::Subdirectories);
     while (it.hasNext()) {
         auto filepath = it.next();
@@ -227,10 +238,13 @@ void InstanceImportTask::extractFinished()
             if (!QFile::setPermissions(filepath, permissions)) {
                 logWarning(tr("Could not fix permissions for %1").arg(filepath));
             } else {
-                qDebug() << "Fixed" << filepath;
+                fixed++;
             }
         }
     }
+    if (fixed > 0)
+        qDebug() << "Fixed permissions for" << fixed << "entries";
+#endif
 
     switch (m_modpackType) {
         case ModpackType::MultiMC:

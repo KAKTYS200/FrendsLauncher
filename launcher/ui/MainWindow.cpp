@@ -1691,6 +1691,15 @@ void MainWindow::runTaskWithStrip(Task* task)
         });
     }
 
+    // The animated backdrop repaints the whole window thirty times a second in
+    // the GUI thread, which is the same thread that has to react to every
+    // progress report from the download. During an install those two compete
+    // and the launcher looks frozen, so the animation waits.
+    if (m_frendsBackdrop) {
+        connect(task, &Task::started, m_frendsBackdrop, [this] { m_frendsBackdrop->setPaused(true); });
+        connect(task, &Task::finished, m_frendsBackdrop, [this] { m_frendsBackdrop->setPaused(false); });
+    }
+
     connect(task, &Task::finished, task, &Task::deleteLater);
     task->start();
 }

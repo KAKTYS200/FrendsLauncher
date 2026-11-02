@@ -201,13 +201,32 @@ FrendsBackdrop::FrendsBackdrop(QWidget* parent) : QWidget(parent)
     m_timer->start();
 }
 
+void FrendsBackdrop::setPaused(bool paused)
+{
+    if (m_paused == paused)
+        return;
+    m_paused = paused;
+
+    if (m_paused) {
+        m_timer->stop();
+        return;
+    }
+
+    // The clock is wall time, so resuming from where the cubes would have been
+    // keeps the loop seamless instead of jumping forward.
+    m_startedMs = QDateTime::currentMSecsSinceEpoch() - qint64(m_elapsed * 1000);
+    if (isVisible())
+        m_timer->start();
+}
+
 void FrendsBackdrop::showEvent(QShowEvent* event)
 {
     QWidget::showEvent(event);
     // Keep the clock running while hidden, otherwise the cubes would jump
     // forward by the time spent in the background.
     m_startedMs = QDateTime::currentMSecsSinceEpoch() - qint64(m_elapsed * 1000);
-    m_timer->start();
+    if (!m_paused)
+        m_timer->start();
 }
 
 void FrendsBackdrop::hideEvent(QHideEvent* event)

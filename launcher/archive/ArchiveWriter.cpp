@@ -22,6 +22,7 @@
 
 #include <QFile>
 #include <QFileInfo>
+#include <QtGlobal>
 
 #include <memory>
 
@@ -234,8 +235,15 @@ bool ArchiveWriter::addFile(ArchiveReader::File* f)
 
 std::unique_ptr<archive, void (*)(archive*)> ArchiveWriter::createDiskWriter()
 {
-    int flags = ARCHIVE_EXTRACT_TIME | ARCHIVE_EXTRACT_PERM | ARCHIVE_EXTRACT_ACL | ARCHIVE_EXTRACT_FFLAGS |
-                ARCHIVE_EXTRACT_SECURE_NODOTDOT | ARCHIVE_EXTRACT_SECURE_SYMLINKS;
+    int flags = ARCHIVE_EXTRACT_TIME | ARCHIVE_EXTRACT_PERM | ARCHIVE_EXTRACT_SECURE_NODOTDOT | ARCHIVE_EXTRACT_SECURE_SYMLINKS;
+
+    // ACLs and file flags are POSIX concepts. On NTFS libarchive has to open a
+    // security descriptor for every single entry to "restore" them, which costs
+    // far more than the file write itself — on a 10 000 file modpack that alone
+    // was a noticeable part of the unpack time, and it changed nothing.
+#ifndef Q_OS_WIN
+    flags |= ARCHIVE_EXTRACT_ACL | ARCHIVE_EXTRACT_FFLAGS;
+#endif
 
     std::unique_ptr<archive, void (*)(archive*)> extPtr(archive_write_disk_new(), [](archive* a) {
         if (a) {

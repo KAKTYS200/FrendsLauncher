@@ -51,12 +51,29 @@ auto ExtractZipTask::extractZip() -> ZipResult
 
     setStatus("Extracting files...");
     setProgress(0, m_input.getFiles().count());
+
+    // Unpacking a modpack is tens of thousands of files, and every setStatus()
+    // or setProgress() call emits a signal into the GUI thread. Doing it per
+    // file turned a two second unzip into minutes of hopping between threads
+    // while the window repainted its animation, so the counter is local here
+    // and only the visible steps are published.
+    const int totalFiles = m_input.getFiles().count();
+    const int reportEvery = qMax(1, totalFiles / 200);
+    int seenFiles = 0;
+
     ZipResult result;
     auto fileName = m_input.getZipName();
-    if (!m_input.parse([this, &result, &target, &target_top_dir, ext, &extracted](ArchiveReader::File* f) {
+    if (!m_input.parse([this, &result, &target, &target_top_dir, ext, &extracted, totalFiles, reportEvery,
+                        &seenFiles](ArchiveReader::File* f) {
             if (m_zipFuture.isCanceled())
                 return false;
-            setProgress(m_progress + 1, m_progressTotal);
+
+            // Publish progress in a few hundred steps rather than per file: the
+            // bar still moves, but the GUI thread is not woken for every entry.
+            seenFiles++;
+            if (seenFiles % reportEvery == 0)
+                setProgress(seenFiles, totalFiles);
+
             QString file_name = f->filename();
             if (!file_name.startsWith(m_subdirectory)) {
                 f->skip();
@@ -65,7 +82,8 @@ auto ExtractZipTask::extractZip() -> ZipResult
 
             auto relative_file_name = QDir::fromNativeSeparators(file_name.mid(m_subdirectory.size()));
             auto original_name = relative_file_name;
-            setStatus("Unpacking: " + relative_file_name);
+            if (seenFiles % reportEvery == 0)
+                setStatus("Unpacking: " + relative_file_name);
 
             // Fix subdirs/files ending with a / getting transformed into absolute paths
             if (relative_file_name.startsWith('/'))
@@ -101,12 +119,17 @@ auto ExtractZipTask::extractZip() -> ZipResult
             }
             extracted.append(target_file_path);
 
-            qDebug() << "Extracted file" << relative_file_name << "to" << target_file_path;
+            // One debug line per extracted file was 10 000 flushed writes to
+            // disk on a large pack, which alone slowed the unzip down visibly.
+            // The summary below says what happened; the file list is only
+            // written when something actually goes wrong.
             return true;
         })) {
         FS::removeFiles(extracted);
         return result.has_value() ? result : ZipResult(tr("Failed to parse file %1").arg(fileName));
     }
+    setProgress(totalFiles, totalFiles);
+    qDebug() << "Extracted" << extracted.size() << "files from" << fileName << "into" << target;
     return ZipResult();
 }
 
