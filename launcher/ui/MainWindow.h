@@ -241,7 +241,9 @@ class MainWindow : public QMainWindow {
     void frendsToggleRainbow();
     /// Starts the Frend Skin publisher and publishes the bound skins.
     void frendsInitFrendSkin();
-    void frendsDownloadLauncherUpdate(const QString& url, const QString& version);
+    /// `digest` is the release's "sha256:..." for that asset, or empty when the
+    /// release carries none.
+    void frendsDownloadLauncherUpdate(const QString& url, const QString& version, const QString& digest);
     void frendsPlayOnServer(const QString& address);
 
    private:

@@ -86,23 +86,24 @@ flatbuild
 # launcher/resources/*.png and tools/ninjatracing.py stay tracked.
 /*.png
 /*.py
+/*.ps1
 /*.log
+/*.txt
+!/CMakeLists.txt
 /*.sh
 /*.bat
 /*.bin
-/*.bak
+*.bak
+*.workbak
 /testdata/
 /testdata-friend/
 /updatesrv/
 /friendprofile-check/
 /_skinprobe/
 /_svgpkg/
+/updtest/
 
 # Local assistant workspace data: session memory, icon previews, backups.
 # Not part of the project and not meant to be published.
 /.workbuddy-ai/
-missing.txt
-missing2.txt
-razbor.txt
-instance.cfg.workbak
-vm.json
+/.mixdog/

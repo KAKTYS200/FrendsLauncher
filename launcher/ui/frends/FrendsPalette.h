@@ -245,4 +245,58 @@ inline QString css(const QColor& color)
         .arg(color.alpha());
 }
 
+/// The create-a-build page stays on a light sheet in both themes: it hosts the
+/// platform catalogue pages, which only know light colours, and a dark page
+/// behind them looked broken. These are therefore fixed values, not part of the
+/// theme palettes above.
+namespace CreatePage {
+
+/// The call to action of the page: the "server" button and the settings prompt.
+inline QString accentGradient()
+{
+    return QStringLiteral("qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #FF8A4C, stop:1 #E0491B)");
+}
+
+inline QString accentGradientHover()
+{
+    return QStringLiteral("qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #FFA068, stop:1 #EE5A26)");
+}
+
+inline QString accentGradientPressed()
+{
+    return QStringLiteral("qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #E0491B, stop:1 #C94316)");
+}
+
+inline QString accentBorder()
+{
+    return QStringLiteral("#C94316");
+}
+
+inline QString onAccent()
+{
+    return QStringLiteral("#FFFFFF");
+}
+
+inline QString headingText()
+{
+    return QStringLiteral("#2F3A45");
+}
+
+inline QString headingTextLarge()
+{
+    return QStringLiteral("#3A3A3A");
+}
+
+inline QString mutedText()
+{
+    return QStringLiteral("#6E6E6E");
+}
+
+inline QString hintText()
+{
+    return QStringLiteral("#8A8A8A");
+}
+
+}  // namespace CreatePage
+
 }  // namespace FrendsTheme

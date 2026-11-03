@@ -31,6 +31,7 @@
 #include <QVBoxLayout>
 
 #include "Application.h"
+#include "FrendsPalette.h"
 #include "FrendsScale.h"
 #include "FrendsServerDialog.h"
 #include "InstanceTask.h"
@@ -413,15 +414,16 @@ QWidget* FrendsCreatePage::buildCurseForgeStub()
     auto* mark = new QLabel(page);
     mark->setAlignment(Qt::AlignCenter);
     mark->setFixedSize(FrendsScale::px(64, this), FrendsScale::px(64, this));
-    mark->setStyleSheet(QStringLiteral("QLabel { background: qlineargradient(x1:0, y1:0, x2:0, y2:1,"
-                                       " stop:0 #FF8A4C, stop:1 #E0491B); color: #FFFFFF; border-radius: 14px;"
-                                       " font-size: 34px; font-weight: 800; }"));
+    mark->setStyleSheet(QStringLiteral("QLabel { background: %1; color: %2; border-radius: 14px;"
+                                       " font-size: 34px; font-weight: 800; }")
+                            .arg(FrendsTheme::CreatePage::accentGradient(), FrendsTheme::CreatePage::onAccent()));
     mark->setText(QStringLiteral("C"));
     layout->addWidget(mark, 0, Qt::AlignHCenter);
 
     auto* heading = new QLabel(tr("Каталог CurseForge"), page);
     heading->setAlignment(Qt::AlignCenter);
-    heading->setStyleSheet(QStringLiteral("color: #3A3A3A; font-size: 19px; font-weight: 700; background: transparent;"));
+    heading->setStyleSheet(QStringLiteral("color: %1; font-size: 19px; font-weight: 700; background: transparent;")
+                               .arg(FrendsTheme::CreatePage::headingTextLarge()));
     layout->addWidget(heading);
 
     auto* text = new QLabel(
@@ -431,17 +433,22 @@ QWidget* FrendsCreatePage::buildCurseForgeStub()
         page);
     text->setAlignment(Qt::AlignCenter);
     text->setWordWrap(true);
-    text->setStyleSheet(QStringLiteral("color: #6E6E6E; font-size: 13px; background: transparent;"));
+    text->setStyleSheet(QStringLiteral("color: %1; font-size: 13px; background: transparent;")
+                            .arg(FrendsTheme::CreatePage::mutedText()));
     layout->addWidget(text);
 
     auto* openSettings = new QPushButton(tr("Открыть настройки и вставить ключ"), page);
     openSettings->setCursor(Qt::PointingHandCursor);
     openSettings->setFixedHeight(FrendsScale::px(34, this));
     openSettings->setStyleSheet(QStringLiteral(
-        "QPushButton { background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #FF8A4C, stop:1 #E0491B);"
-        " color: #FFFFFF; border: 1px solid #C94316; border-radius: 6px; font-size: 14px; font-weight: 700;"
-        " padding: 6px 18px; }"
-        "QPushButton:hover { background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #FFA068, stop:1 #EE5A26); }"));
+                                    "QPushButton { background: %1; color: %2; border: 1px solid %3;"
+                                    " border-radius: 6px; font-size: 14px; font-weight: 700;"
+                                    " padding: 6px 18px; }"
+                                    "QPushButton:hover { background: %4; }")
+                                    .arg(FrendsTheme::CreatePage::accentGradient(),
+                                         FrendsTheme::CreatePage::onAccent(),
+                                         FrendsTheme::CreatePage::accentBorder(),
+                                         FrendsTheme::CreatePage::accentGradientHover()));
     connect(openSettings, &QPushButton::clicked, this, &FrendsCreatePage::openApiSettingsRequested);
     layout->addWidget(openSettings, 0, Qt::AlignHCenter);
 
@@ -523,27 +530,28 @@ void FrendsCreatePage::applyScale()
     const int tileHeight = FrendsScale::px(66, this);
 
     if (m_title) {
-        m_title->setStyleSheet(QStringLiteral("color: #2F3A45; font-size: %1px; font-weight: 800; background: transparent;")
+        m_title->setStyleSheet(QStringLiteral("color: %1; font-size: %2px; font-weight: 800; background: transparent;")
+                                   .arg(FrendsTheme::CreatePage::headingText())
                                    .arg(FrendsScale::px(20, this)));
     }
     if (m_subtitle) {
-        m_subtitle->setStyleSheet(
-            QStringLiteral("color: #8A8A8A; font-size: %1px; background: transparent;").arg(hintFont));
+        m_subtitle->setStyleSheet(QStringLiteral("color: %1; font-size: %2px; background: transparent;")
+                                      .arg(FrendsTheme::CreatePage::hintText())
+                                      .arg(hintFont));
     }
     for (auto* tile : m_tiles)
         tile->setFixedHeight(tileHeight);
 
     if (m_serverButton) {
         m_serverButton->setStyleSheet(
-            QStringLiteral(
-                "QPushButton#serverButton { background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #FF8A4C,"
-                " stop:1 #E0491B); color: #FFFFFF; border: 1px solid #C94316; border-radius: 5px; font-size: %1px;"
-                " font-weight: 700; padding: 6px 16px; }"
-                "QPushButton#serverButton:hover { background: qlineargradient(x1:0, y1:0, x2:0, y2:1,"
-                " stop:0 #FFA068, stop:1 #EE5A26); }"
-                "QPushButton#serverButton:pressed { background: qlineargradient(x1:0, y1:0, x2:0, y2:1,"
-                " stop:0 #E0491B, stop:1 #C94316); }")
-                .arg(bodyFont));
+            QStringLiteral("QPushButton#serverButton { background: %1; color: %2; border: 1px solid %3;"
+                           " border-radius: 5px; font-size: %4px; font-weight: 700; padding: 6px 16px; }"
+                           "QPushButton#serverButton:hover { background: %5; }"
+                           "QPushButton#serverButton:pressed { background: %6; }")
+                .arg(FrendsTheme::CreatePage::accentGradient(), FrendsTheme::CreatePage::onAccent(),
+                     FrendsTheme::CreatePage::accentBorder())
+                .arg(bodyFont)
+                .arg(FrendsTheme::CreatePage::accentGradientHover(), FrendsTheme::CreatePage::accentGradientPressed()));
         m_serverButton->setFixedHeight(buttonHeight);
     }
 

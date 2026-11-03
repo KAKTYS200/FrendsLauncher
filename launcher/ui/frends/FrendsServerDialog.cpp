@@ -54,22 +54,14 @@
 #include "java/JavaUtils.h"
 
 namespace {
-const QString kManifestUrl = QStringLiteral("https://piston-meta.mojang.com/mc/game/version_manifest_v2.json");
-const QString kPaperVersionsUrl = QStringLiteral("https://fill.papermc.io/v3/projects/paper");
-const QString kModrinthSearchUrl = QStringLiteral("https://api.modrinth.com/v2/search");
-const QString kModrinthProjectUrl = QStringLiteral("https://api.modrinth.com/v2/project/");
-const QString kCurseSearchUrl = QStringLiteral("https://api.curseforge.com/v1/mods/search");
-const QString kCurseModsUrl = QStringLiteral("https://api.curseforge.com/v1/mods/");
+// The catalog endpoints (Mojang, Paper, Modrinth, CurseForge) live in
+// FrendsServerCatalog; these are the ones this dialog still calls itself.
 const QString kFabricMetaUrl = QStringLiteral("https://meta.fabricmc.net/v2/versions");
 const QString kForgeMavenUrl = QStringLiteral("https://maven.minecraftforge.net/net/minecraftforge/forge/");
 const QString kNeoForgeMavenUrl = QStringLiteral("https://maven.neoforged.net/releases/net/neoforged/neoforge/");
-
-/// Snapshot, release candidate and pre-release ids are noise in a server list.
-bool isStableVersion(const QString& id)
-{
-    return !id.contains(QLatin1String("-rc")) && !id.contains(QLatin1String("-pre")) &&
-           !id.contains(QLatin1String("snapshot"));
-}
+/// CurseForge hands out download links per file id rather than putting them in
+/// the catalog answer, so the dialog resolves them itself.
+const QString kCurseModsUrl = QStringLiteral("https://api.curseforge.com/v1/mods/");
 
 /// Files inside a modpack must never escape the server folder.
 QString safeRelativePath(const QString& path)
@@ -111,6 +103,31 @@ FrendsServerDialog::FrendsServerDialog(QWidget* parent) : QDialog(parent)
     m_net = new QNetworkAccessManager(this);
     m_process = new QProcess(this);
     m_installer = new QProcess(this);
+    m_catalog = new FrendsServerCatalog(m_net, this);
+
+    connect(m_catalog, &FrendsServerCatalog::minecraftVersionsReady, this, [this](const QVector<QString>& versions) {
+        m_vanillaVersions = versions;
+        if (currentCore() != Core::Vanilla)
+            return;
+        m_version->clear();
+        for (const auto& id : qAsConst(m_vanillaVersions))
+            m_version->addItem(id);
+        setStatus(tr("Выберите версию и нажмите «Скачать сервер»."));
+    });
+
+    connect(m_catalog, &FrendsServerCatalog::paperVersionsReady, this, [this](const QVector<QString>& versions) {
+        m_paperVersions = versions;
+        if (currentCore() != Core::Paper)
+            return;
+        m_version->clear();
+        for (const auto& id : qAsConst(m_paperVersions))
+            m_version->addItem(id);
+        setStatus(tr("Выберите версию и нажмите «Скачать сервер»."));
+    });
+
+    connect(m_catalog, &FrendsServerCatalog::packsReady, this, &FrendsServerDialog::showPacks);
+    connect(m_catalog, &FrendsServerCatalog::packFilesReady, this, &FrendsServerDialog::showPackFiles);
+    connect(m_catalog, &FrendsServerCatalog::failed, this, [this](const QString& message) { setStatus(message, true); });
 
     buildUi();
     applyStyle();
@@ -379,226 +396,53 @@ FrendsServerDialog::Core FrendsServerDialog::currentCore() const
 
 void FrendsServerDialog::loadVersions()
 {
-    fetchJson(m_net, QUrl(kManifestUrl), {}, [this](const QJsonDocument& doc, const QString& error) {
-        if (!error.isEmpty()) {
-            setStatus(tr("Не удалось загрузить список версий Minecraft: %1").arg(error), true);
-            return;
-        }
-        m_vanillaVersions.clear();
-        m_vanillaUrls.clear();
-        for (const auto& entry : doc.object().value("versions").toArray()) {
-            const auto object = entry.toObject();
-            if (object.value("type").toString() != QLatin1String("release"))
-                continue;
-            const QString id = object.value("id").toString();
-            if (id.isEmpty() || !isStableVersion(id))
-                continue;
-            m_vanillaVersions.push_back(id);
-            m_vanillaUrls.insert(id, QUrl(object.value("url").toString()));
-        }
-        if (currentCore() == Core::Vanilla) {
-            m_version->clear();
-            for (const auto& id : m_vanillaVersions)
-                m_version->addItem(id);
-            setStatus(tr("Выберите версию и нажмите «Скачать сервер»."));
-        }
-    });
-
-    // Paper's v3 catalog already groups versions by major line, newest first.
-    fetchJson(m_net, QUrl(kPaperVersionsUrl), {}, [this](const QJsonDocument& doc, const QString&) {
-        const auto versions = doc.object().value("versions").toObject();
-        if (versions.isEmpty())
-            return;  // a dead Paper catalog is not fatal, vanilla still works
-        m_paperVersions.clear();
-        for (auto it = versions.begin(); it != versions.end(); ++it) {
-            for (const auto& value : it.value().toArray()) {
-                const QString id = value.toString();
-                if (!id.isEmpty() && isStableVersion(id))
-                    m_paperVersions.push_back(id);
-            }
-        }
-        if (currentCore() == Core::Paper) {
-            m_version->clear();
-            for (const auto& id : m_paperVersions)
-                m_version->addItem(id);
-            setStatus(tr("Выберите версию и нажмите «Скачать сервер»."));
-        }
-    });
+    m_catalog->loadMinecraftVersions();
+    m_catalog->loadPaperVersions();
 }
 
 void FrendsServerDialog::loadModrinthPacks()
 {
-    QUrl url(kModrinthSearchUrl);
-    QUrlQuery query;
-    query.addQueryItem(QStringLiteral("query"), m_search->text().trimmed());
-    query.addQueryItem(QStringLiteral("limit"), QStringLiteral("20"));
-    query.addQueryItem(QStringLiteral("index"), QStringLiteral("relevance"));
-    query.addQueryItem(QStringLiteral("facets"), QStringLiteral("[[\"project_type:modpack\"]]"));
-    url.setQuery(query);
-
     setStatus(tr("Ищу сборки на Modrinth…"));
-    fetchJson(m_net, url, {}, [this](const QJsonDocument& doc, const QString& error) {
-        if (!error.isEmpty()) {
-            setStatus(tr("Modrinth не ответил: %1").arg(error), true);
-            return;
-        }
-        m_packs.clear();
-        m_pack->clear();
-        m_packFile->clear();
-        m_packFiles.clear();
-        for (const auto& hit : doc.object().value("hits").toArray()) {
-            const auto object = hit.toObject();
-            Pack pack;
-            pack.id = object.value("project_id").toString();
-            pack.title = object.value("title").toString();
-            pack.note = object.value("author").toString();
-            if (pack.id.isEmpty() || pack.title.isEmpty())
-                continue;
-            m_packs.push_back(pack);
-            m_pack->addItem(pack.note.isEmpty() ? pack.title : tr("%1 — %2").arg(pack.title, pack.note), pack.id);
-        }
-        setStatus(m_packs.isEmpty() ? tr("На Modrinth ничего не нашлось, попробуйте другой запрос.")
-                                    : tr("Выберите сборку из списка."),
-                  m_packs.isEmpty());
-    });
-}
-
-void FrendsServerDialog::loadModrinthFiles(const QString& projectId)
-{
-    fetchJson(m_net, QUrl(kModrinthProjectUrl + projectId + QStringLiteral("/version")), {},
-              [this](const QJsonDocument& doc, const QString& error) {
-                  if (!error.isEmpty()) {
-                      setStatus(tr("Modrinth не отдал версии сборки: %1").arg(error), true);
-                      return;
-                  }
-                  m_packFiles.clear();
-                  m_packFile->clear();
-                  for (const auto& entry : doc.array()) {
-                      const auto object = entry.toObject();
-                      QString fileUrl;
-                      for (const auto& file : object.value("files").toArray()) {
-                          const auto f = file.toObject();
-                          if (f.value("primary").toBool() || fileUrl.isEmpty())
-                              fileUrl = f.value("url").toString();
-                      }
-                      if (fileUrl.isEmpty())
-                          continue;
-
-                      QStringList games;
-                      for (const auto& g : object.value("game_versions").toArray())
-                          games << g.toString();
-                      QStringList loaders;
-                      for (const auto& l : object.value("loaders").toArray())
-                          loaders << l.toString();
-
-                      PackFile file;
-                      file.url = fileUrl;
-                      file.label = QStringLiteral("%1 — %2 / %3")
-                                       .arg(object.value("version_number").toString(),
-                                            games.isEmpty() ? QStringLiteral("?") : games.first(),
-                                            loaders.isEmpty() ? QStringLiteral("vanilla") : loaders.join(QStringLiteral(", ")));
-                      m_packFiles.push_back(file);
-                      m_packFile->addItem(file.label);
-                  }
-                  setStatus(m_packFiles.isEmpty() ? tr("У этой сборки нет скачиваемых версий.")
-                                                  : tr("Выберите версию сборки и нажмите «Скачать сервер»."),
-                            m_packFiles.isEmpty());
-              });
+    m_catalog->loadModrinthPacks(m_search->text());
 }
 
 void FrendsServerDialog::loadCurseForgePacks()
 {
-    const QString key = APPLICATION->getFlameAPIKey();
-    if (key.isEmpty()) {
-        setStatus(tr("Для CurseForge нужен API-ключ: настройки → «Службы» → ключ CurseForge. "
-                     "Без ключа сборки берутся с Modrinth."),
-                  true);
-        return;
-    }
-
-    QUrl url(kCurseSearchUrl);
-    QUrlQuery query;
-    query.addQueryItem(QStringLiteral("gameId"), QStringLiteral("432"));
-    query.addQueryItem(QStringLiteral("classId"), QStringLiteral("4471"));
-    query.addQueryItem(QStringLiteral("pageSize"), QStringLiteral("20"));
-    query.addQueryItem(QStringLiteral("sortField"), QStringLiteral("2"));
-    query.addQueryItem(QStringLiteral("sortOrder"), QStringLiteral("desc"));
-    if (!m_search->text().trimmed().isEmpty())
-        query.addQueryItem(QStringLiteral("searchFilter"), m_search->text().trimmed());
-    url.setQuery(query);
-
     setStatus(tr("Ищу сборки на CurseForge…"));
-    fetchJson(m_net, url, key.toUtf8(), [this](const QJsonDocument& doc, const QString& error) {
-        if (!error.isEmpty()) {
-            setStatus(tr("CurseForge не ответил: %1").arg(error), true);
-            return;
-        }
-        m_packs.clear();
-        m_pack->clear();
-        m_packFile->clear();
-        m_packFiles.clear();
-        for (const auto& entry : doc.object().value("data").toArray()) {
-            const auto object = entry.toObject();
-            Pack pack;
-            pack.id = QString::number(object.value("id").toInt());
-            pack.title = object.value("name").toString();
-            pack.note = object.value("slug").toString();
-            if (pack.id.isEmpty() || pack.title.isEmpty())
-                continue;
-            m_packs.push_back(pack);
-            m_pack->addItem(pack.title, pack.id);
-        }
-        setStatus(m_packs.isEmpty() ? tr("На CurseForge ничего не нашлось.")
-                                    : tr("Выберите сборку из списка."),
-                  m_packs.isEmpty());
-    });
+    m_catalog->loadCurseForgePacks(m_search->text(), APPLICATION->getFlameAPIKey());
+}
+
+void FrendsServerDialog::loadModrinthFiles(const QString& projectId)
+{
+    m_catalog->loadModrinthFiles(projectId);
 }
 
 void FrendsServerDialog::loadCurseForgeFiles(const QString& modId)
 {
-    const QString key = APPLICATION->getFlameAPIKey();
-    if (key.isEmpty()) {
-        setStatus(tr("Для CurseForge нужен API-ключ в настройках."), true);
-        return;
-    }
+    m_catalog->loadCurseForgeFiles(modId, APPLICATION->getFlameAPIKey());
+}
 
-    QUrl url(kCurseModsUrl + modId + QStringLiteral("/files"));
-    QUrlQuery query;
-    query.addQueryItem(QStringLiteral("pageSize"), QStringLiteral("50"));
-    url.setQuery(query);
+void FrendsServerDialog::showPacks(const QVector<Pack>& packs)
+{
+    m_packs = packs;
+    m_pack->clear();
+    m_packFile->clear();
+    m_packFiles.clear();
+    for (const auto& pack : packs)
+        m_pack->addItem(pack.note.isEmpty() ? pack.title : tr("%1 — %2").arg(pack.title, pack.note), pack.id);
+    setStatus(packs.isEmpty() ? tr("Ничего не нашлось, попробуйте другой запрос.") : tr("Выберите сборку из списка."),
+              packs.isEmpty());
+}
 
-    fetchJson(m_net, url, key.toUtf8(), [this](const QJsonDocument& doc, const QString& error) {
-        if (!error.isEmpty()) {
-            setStatus(tr("CurseForge не отдал файлы сборки: %1").arg(error), true);
-            return;
-        }
-        m_packFiles.clear();
-        m_packFile->clear();
-        for (const auto& entry : doc.object().value("data").toArray()) {
-            const auto object = entry.toObject();
-            const int fileId = object.value("id").toInt();
-            if (fileId == 0)
-                continue;
-
-            QStringList tags;
-            for (const auto& g : object.value("gameVersions").toArray())
-                tags << g.toString();
-
-            PackFile file;
-            file.fileId = fileId;
-            file.label = QStringLiteral("%1 — %2").arg(object.value("displayName").toString(), tags.join(QStringLiteral(" / ")));
-            // A server pack is a ready-to-run folder, so prefer it when the
-            // author published one; otherwise the client zip is unpacked.
-            const int serverPackId = object.value("serverPackFileId").toInt();
-            file.serverPack = serverPackId != 0;
-            file.url.clear();
-            file.fileId = serverPackId != 0 ? serverPackId : fileId;
-            m_packFiles.push_back(file);
-            m_packFile->addItem(file.label);
-        }
-        setStatus(m_packFiles.isEmpty() ? tr("У этой сборки нет файлов.") : tr("Выберите версию сборки и нажмите «Скачать сервер»."),
-                  m_packFiles.isEmpty());
-    });
+void FrendsServerDialog::showPackFiles(const QVector<PackFile>& files)
+{
+    m_packFiles = files;
+    m_packFile->clear();
+    for (const auto& file : files)
+        m_packFile->addItem(file.label);
+    setStatus(files.isEmpty() ? tr("У этой сборки нет скачиваемых версий.")
+                              : tr("Выберите версию сборки и нажмите «Скачать сервер»."),
+              files.isEmpty());
 }
 
 void FrendsServerDialog::browseFolder()
@@ -681,7 +525,7 @@ void FrendsServerDialog::startDownload()
 
 void FrendsServerDialog::resolveVanilla(const QString& version)
 {
-    const QUrl url = m_vanillaUrls.value(version);
+    const QUrl url = m_catalog->minecraftVersionUrl(version);
     if (!url.isValid()) {
         setBusy(false);
         setStatus(tr("Для версии %1 нет серверного ядра.").arg(version), true);

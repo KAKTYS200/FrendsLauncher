@@ -98,7 +98,7 @@ QPixmap drawNavIcon(NavIcon icon, int size, const QColor& color)
             right << QPointF(20, 8) << QPointF(12, 12.5) << QPointF(12, 20.5) << QPointF(20, 16);
 
             QColor fill = color;
-            fill.setAlphaF(0.35);
+            fill.setAlphaF(0.35f);
             p.setBrush(fill);
             p.drawPolygon(top);
             p.setBrush(Qt::NoBrush);

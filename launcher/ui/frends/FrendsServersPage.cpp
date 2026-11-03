@@ -527,16 +527,16 @@ void FrendsServersPage::ping(const QString& address)
     connect(resolver, &McResolver::succeeded, this, [this, address, host, timer](QString ip, int resolvedPort) {
         auto* client = new McClient(this, host, ip, static_cast<uint16_t>(resolvedPort));
 
-        connect(client, &McClient::succeeded, this, [this, address, timer](QJsonObject data) {
+        connect(client, &McClient::succeeded, this, [this, address, timer](QJsonObject statusJson) {
             Status status;
             status.answered = true;
             status.online = true;
 
-            const auto players = data.value("players").toObject();
+            const auto players = statusJson.value("players").toObject();
             status.players = players.value("online").toInt();
             status.capacity = players.value("max").toInt();
-            status.version = data.value("version").toObject().value("name").toString();
-            status.motd = motdFromJson(data.value("description"));
+            status.version = statusJson.value("version").toObject().value("name").toString();
+            status.motd = motdFromJson(statusJson.value("description"));
             status.latency = timer->elapsed();
 
             delete timer;

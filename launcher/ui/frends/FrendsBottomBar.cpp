@@ -670,7 +670,9 @@ void FrendsBottomBar::retranslate()
     m_playButton->setText(m_running ? tr("Остановить") : tr("Войти в игру"));
     if (m_modsButton) {
         // The button opens the build tab now, so the label says what it does.
-        m_modsButton->setText(QStringLiteral("СОЗДАТЬ\nСБОРКУ"));
+        // Kept as a translatable two-line label: the line break is layout, the
+        // words are not.
+        m_modsButton->setText(tr("СОЗДАТЬ\nСБОРКУ"));
         m_modsButton->setToolTip(tr("Открыть вкладку создания сборки"));
     }
     if (m_refreshButton) {

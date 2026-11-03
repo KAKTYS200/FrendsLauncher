@@ -19,6 +19,7 @@
 #include "FrendsSelfUpdate.h"
 
 #include <QCoreApplication>
+#include <QCryptographicHash>
 #include <QDebug>
 #include <QDir>
 #include <QDirIterator>
@@ -103,6 +104,51 @@ bool isNewerVersion(const QString& remote, const QString& current)
     return false;
 }
 
+bool archiveMatchesDigest(const QString& archivePath, const QString& digest)
+{
+    const auto trimmed = digest.trimmed();
+    if (trimmed.isEmpty())
+        return true;
+
+    // GitHub sends "sha256:<hex>". Only that algorithm is understood here; an
+    // unknown one is reported rather than waved through, because silently
+    // skipping the check is exactly what this function exists to prevent.
+    const int separator = trimmed.indexOf(QLatin1Char(':'));
+    if (separator <= 0) {
+        qWarning() << "[self-update] malformed digest:" << digest;
+        return false;
+    }
+    const auto algorithm = trimmed.left(separator).toLower();
+    if (algorithm != QLatin1String("sha256")) {
+        qWarning() << "[self-update] unsupported digest algorithm:" << algorithm;
+        return false;
+    }
+    const auto expected = QByteArray::fromHex(trimmed.mid(separator + 1).toLatin1());
+    if (expected.isEmpty()) {
+        qWarning() << "[self-update] empty digest body:" << digest;
+        return false;
+    }
+
+    QFile file(archivePath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        qWarning() << "[self-update] cannot open the archive for hashing:" << archivePath << file.errorString();
+        return false;
+    }
+
+    QCryptographicHash hash(QCryptographicHash::Sha256);
+    if (!hash.addData(&file)) {
+        qWarning() << "[self-update] cannot read the archive for hashing:" << archivePath;
+        return false;
+    }
+
+    const auto actual = hash.result();
+    if (actual != expected) {
+        qWarning() << "[self-update] digest mismatch: expected" << expected.toHex() << "got" << actual.toHex();
+        return false;
+    }
+    return true;
+}
+
 bool runUpdateHelperIfRequested(const QStringList& arguments)
 {
     const int flagIndex = arguments.indexOf(QString::fromLatin1(kApplyFlag));
@@ -152,11 +198,13 @@ QString latestReleaseApiUrl(const QString& repositoryUrl)
         base.chop(1);
 
     // An API address may already be configured; only the suffix is missing then.
+    // "https://api.github.com/repos/Owner/Repo" must not be run through the
+    // web-address branch below, which would look for "repos/" and produce
+    // ".../repos/repos/Owner/Repo".
     if (base.contains(QStringLiteral("api.github.com"))) {
         if (base.endsWith(QStringLiteral("/releases/latest")))
             return base;
-        if (base.endsWith(QStringLiteral("/repos")))
-            return base + QStringLiteral("/OWNER/REPO");
+        return base + QStringLiteral("/releases/latest");
     }
 
     if (base.contains(QStringLiteral("github.com"))) {

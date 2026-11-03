@@ -674,9 +674,14 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         // carries the latest version and the executable download URL.
         m_settings->registerSetting("FrendsLauncherUpdateUrl", QString());
         // Frend Skin: the launcher publishes the skins of its accounts locally.
-        m_settings->registerSetting("FrendSkinEnabled", false);
-        m_settings->registerSetting("FrendSkinPort", 0);
-        m_settings->registerSetting("FrendSkinBindings", QString());
+        // The settings only exist while the feature is compiled in: registering
+        // them unconditionally left keys in the config that matched no code and
+        // no checkbox, because every reader of them sits behind FrendSkins::ENABLED.
+        if (FrendSkins::ENABLED) {
+            m_settings->registerSetting("FrendSkinEnabled", false);
+            m_settings->registerSetting("FrendSkinPort", 0);
+            m_settings->registerSetting("FrendSkinBindings", QString());
+        }
         // Offline session support: the local stand-in for Mojang's session server.
         m_settings->registerSetting("FrendSessionPort", 0);
 

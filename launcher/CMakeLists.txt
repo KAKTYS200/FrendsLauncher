@@ -856,6 +856,8 @@ SET(LAUNCHER_SOURCES
     ui/frends/FrendsCreatePage.cpp
     ui/frends/FrendsServerDialog.h
     ui/frends/FrendsServerDialog.cpp
+    ui/frends/FrendsServerCatalog.h
+    ui/frends/FrendsServerCatalog.cpp
     ui/frends/InstanceCreationSink.h
     ui/InstanceWindow.h
     ui/InstanceWindow.cpp

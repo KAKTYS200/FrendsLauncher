@@ -224,7 +224,7 @@ class RainbowOverlay : public QWidget {
             qreal hue = m_phase + position;
             if (hue >= 1.0)
                 hue -= 1.0;
-            gradient.setColorAt(position, QColor::fromHsvF(hue, 0.85, 1.0, 0.26));
+            gradient.setColorAt(position, QColor::fromHsvF(hue, 0.85f, 1.0f, 0.26f));
         }
         p.fillRect(rect(), gradient);
     }
@@ -1231,14 +1231,19 @@ void MainWindow::frendsUpdateLauncher()
         // The portable archive is what carries the whole build; replacing only
         // the executable would leave the Qt libraries at the old version.
         QString downloadUrl;
+        // GitHub reports what it stored for the asset; it is the only party that
+        // can say whether the file that arrives is the one that was published.
+        QString downloadDigest;
         for (const auto& value : release.value("assets").toArray()) {
             const auto asset = value.toObject();
             const auto name = asset.value("name").toString();
             if (!name.endsWith(QStringLiteral(".zip"), Qt::CaseInsensitive))
                 continue;
             // Prefer the portable build when a release has several archives.
-            if (downloadUrl.isEmpty() || name.contains(QStringLiteral("portable"), Qt::CaseInsensitive))
+            if (downloadUrl.isEmpty() || name.contains(QStringLiteral("portable"), Qt::CaseInsensitive)) {
                 downloadUrl = asset.value("browser_download_url").toString();
+                downloadDigest = asset.value("digest").toString();
+            }
         }
 
         if (downloadUrl.isEmpty()) {
@@ -1253,17 +1258,17 @@ void MainWindow::frendsUpdateLauncher()
                                                     "Скачать и установить сейчас?")
                                                      .arg(releaseName, currentVersion),
                                                  QMessageBox::Question, QMessageBox::Yes | QMessageBox::No);
-        connect(box, &QDialog::finished, this, [this, downloadUrl, tag](int result) {
+        connect(box, &QDialog::finished, this, [this, downloadUrl, downloadDigest, tag](int result) {
             // QMessageBox reports the pressed standard button, not QDialog::Accepted.
             if (result != QMessageBox::Yes)
                 return;
-            frendsDownloadLauncherUpdate(downloadUrl, tag);
+            frendsDownloadLauncherUpdate(downloadUrl, tag, downloadDigest);
         });
         box->exec();
     });
 }
 
-void MainWindow::frendsDownloadLauncherUpdate(const QString& url, const QString& version)
+void MainWindow::frendsDownloadLauncherUpdate(const QString& url, const QString& version, const QString& digest)
 {
     const auto tempRoot = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
     const auto updateDir = QDir(tempRoot).absoluteFilePath(QStringLiteral("frends-update-%1").arg(version));
@@ -1280,7 +1285,7 @@ void MainWindow::frendsDownloadLauncherUpdate(const QString& url, const QString&
 
     connect(reply, &QNetworkReply::downloadProgress, m_frendsBottomBar, &FrendsBottomBar::setDownloadProgress);
 
-    connect(reply, &QNetworkReply::finished, this, [this, reply, updateDir, archivePath, version] {
+    connect(reply, &QNetworkReply::finished, this, [this, reply, updateDir, archivePath, version, digest] {
         m_launcherUpdateReply.clear();
 
         if (reply->error() != QNetworkReply::NoError) {
@@ -1310,6 +1315,18 @@ void MainWindow::frendsDownloadLauncherUpdate(const QString& url, const QString&
         reply->deleteLater();
 
         m_frendsBottomBar->hideDownloadProgress();
+
+        // Checked before anything is unpacked, so a file that is not the one
+        // GitHub published never reaches the disk as a runnable build.
+        if (!FrendsSelfUpdate::archiveMatchesDigest(archivePath, digest)) {
+            QFile::remove(archivePath);
+            CustomMessageBox::selectable(this, tr("Обновление лаунчера"),
+                                         tr("Скачанный архив не совпадает с тем, что опубликован на GitHub.\n\n"
+                                            "Обновление отменено, файл удалён. Повторите попытку позже."),
+                                         QMessageBox::Critical)
+                ->exec();
+            return;
+        }
 
         // Unpack next to the download, so the new build can be started from
         // there and copy itself over the installed one.

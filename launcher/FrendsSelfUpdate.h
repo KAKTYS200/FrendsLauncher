@@ -53,6 +53,17 @@ void cleanupStaleUpdates();
 bool isNewerVersion(const QString& remote, const QString& current);
 
 /**
+ * Checks that a downloaded archive is the one GitHub published.
+ *
+ * `digest` is the `assets[].digest` field of the release, in the form
+ * "sha256:<hex>". GitHub is the only party that knows it, so a match rules out
+ * a replaced archive on a mirror, a tampered download or a hijacked connection.
+ * An empty digest means the release carries none, which is not treated as a
+ * failure: that is how older releases look.
+ */
+bool archiveMatchesDigest(const QString& archivePath, const QString& digest);
+
+/**
  * Turns a repository web address into the API endpoint for its latest release.
  *
  * "https://github.com/Owner/Repo" becomes

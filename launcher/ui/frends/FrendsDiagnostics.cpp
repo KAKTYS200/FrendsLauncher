@@ -18,6 +18,7 @@
 #include "FrendsDiagnostics.h"
 
 #include <QApplication>
+#include <QCoreApplication>
 #include <QScreen>
 #include <QThread>
 #include <QUuid>
@@ -121,28 +122,32 @@ QString fingerprintReport()
 {
     QStringList lines;
 
-    lines << QStringLiteral("Лаунчер: %1 %2").arg(BuildConfig.LAUNCHER_DISPLAYNAME, BuildConfig.printableVersionString());
-    lines << QStringLiteral("Qt: %1 (собрано с %2)").arg(QString::fromLatin1(qVersion()), QString::fromLatin1(QT_VERSION_STR));
-    lines << QStringLiteral("ОС: %1").arg(QSysInfo::prettyProductName());
-    lines << QStringLiteral("Ядро: %1").arg(QSysInfo::kernelVersion());
-    lines << QStringLiteral("Архитектура: %1 (%2-bit)").arg(QSysInfo::currentCpuArchitecture()).arg(QSysInfo::WordSize);
-    lines << QStringLiteral("Логических ядер CPU: %1").arg(QThread::idealThreadCount());
+    // The report is a free function, so it has no tr() of its own; the class
+    // context has to be named explicitly or these lines never reach a .ts file.
+    auto text = [](const char* source) { return QCoreApplication::translate("FrendsDiagnostics", source); };
+
+    lines << text("Лаунчер: %1 %2").arg(BuildConfig.LAUNCHER_DISPLAYNAME, BuildConfig.printableVersionString());
+    lines << text("Qt: %1 (собрано с %2)").arg(QString::fromLatin1(qVersion()), QString::fromLatin1(QT_VERSION_STR));
+    lines << text("ОС: %1").arg(QSysInfo::prettyProductName());
+    lines << text("Ядро: %1").arg(QSysInfo::kernelVersion());
+    lines << text("Архитектура: %1 (%2-bit)").arg(QSysInfo::currentCpuArchitecture()).arg(QSysInfo::WordSize);
+    lines << text("Логических ядер CPU: %1").arg(QThread::idealThreadCount());
 
     const auto ramMb = totalPhysicalMemoryMb();
     if (ramMb > 0)
-        lines << QStringLiteral("Оперативная память: %1 МБ").arg(ramMb);
+        lines << text("Оперативная память: %1 МБ").arg(ramMb);
 
-    lines << QStringLiteral("Разрешение экрана: %1x%2 @ %3x")
+    lines << text("Разрешение экрана: %1x%2 @ %3x")
                  .arg(qApp->primaryScreen() ? qApp->primaryScreen()->geometry().width() : 0)
                  .arg(qApp->primaryScreen() ? qApp->primaryScreen()->geometry().height() : 0)
                  .arg(qApp->primaryScreen() ? qApp->primaryScreen()->devicePixelRatio() : 1.0);
 
     if (APPLICATION) {
         const auto javaPath = APPLICATION->settings()->get("JavaPath").toString();
-        lines << QStringLiteral("Java: %1").arg(javaPath.isEmpty() ? QStringLiteral("выбирается автоматически") : javaPath);
+        lines << text("Java: %1").arg(javaPath.isEmpty() ? text("выбирается автоматически") : javaPath);
     }
 
-    lines << QStringLiteral("Идентификатор установки: %1").arg(installId());
+    lines << text("Идентификатор установки: %1").arg(installId());
 
     return lines.join(QLatin1Char('\n'));
 }

@@ -23,6 +23,8 @@
 #include <QUrl>
 #include <QVector>
 
+#include "FrendsServerCatalog.h"
+
 class QCheckBox;
 class QComboBox;
 class QLabel;
@@ -59,24 +61,10 @@ class FrendsServerDialog : public QDialog {
     /// Where the server files come from.
     enum class Core { Vanilla, Paper, Modrinth, CurseForge };
 
-    /// A modpack as the catalogs list it.
-    struct Pack
-    {
-        QString id;
-        QString title;
-        QString note;
-    };
-
-    /// One downloadable build of that modpack.
-    struct PackFile
-    {
-        QString label;
-        QString url;
-        /// True when CurseForge gave a ready-made server pack instead of a client zip.
-        bool serverPack = false;
-        /// CurseForge file id, needed for the download-url endpoint.
-        int fileId = 0;
-    };
+    // The catalog types are shared with FrendsServerCatalog, which does the
+    // talking to Modrinth, CurseForge and Mojang.
+    using Pack = FrendsServerCatalog::Pack;
+    using PackFile = FrendsServerCatalog::PackFile;
 
     /// A single file of the install, waiting for its turn in the queue.
     struct QueueItem
@@ -94,6 +82,10 @@ class FrendsServerDialog : public QDialog {
     void loadCurseForgePacks();
     void loadModrinthFiles(const QString& projectId);
     void loadCurseForgeFiles(const QString& modId);
+    /// Fills the pack combo from the catalog and resets the file combo with it.
+    void showPacks(const QVector<Pack>& packs);
+    /// Fills the file combo of the chosen pack.
+    void showPackFiles(const QVector<PackFile>& files);
 
     void startDownload();
     void resolveVanilla(const QString& version);
@@ -143,9 +135,8 @@ class FrendsServerDialog : public QDialog {
     QNetworkAccessManager* m_net = nullptr;
     QProcess* m_process = nullptr;
     QProcess* m_installer = nullptr;
+    FrendsServerCatalog* m_catalog = nullptr;
 
-    /// Version id to its metadata json, straight from the Mojang manifest.
-    QHash<QString, QUrl> m_vanillaUrls;
     QVector<QString> m_vanillaVersions;
     QVector<QString> m_paperVersions;
 
