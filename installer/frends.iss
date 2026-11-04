@@ -4,12 +4,18 @@
 ; The portable zip is produced separately, this one writes a normal Windows
 ; installation with a Start Menu group, an uninstaller and an optional desktop
 ; shortcut. Player data stays in %APPDATA%\FrendsLauncher and is never touched.
+;
+; Release builds pass the version in, so the installer and the launcher cannot
+; disagree about it: ISCC.exe /DAppVersion=1.3 frends.iss
 
 [Setup]
 AppId={{8E4C1F62-7B1A-4E0D-9C2B-FRENDS0001}
 AppName=Frends Launcher
-AppVersion=1.2
-AppVerName=Frends Launcher 1.2
+#ifndef AppVersion
+#define AppVersion "1.2"
+#endif
+AppVersion={#AppVersion}
+AppVerName=Frends Launcher {#AppVersion}
 AppPublisher=Frends Launcher
 AppPublisherURL=https://github.com/KAKTYS200/FrendsLauncher
 AppSupportURL=https://github.com/KAKTYS200/FrendsLauncher
@@ -18,10 +24,10 @@ DefaultDirName={autopf}\Frends Launcher
 DefaultGroupName=Frends Launcher
 DisableProgramGroupPage=yes
 OutputDir=..\dist
-OutputBaseFilename=FrendsLauncher-1.2-setup
+OutputBaseFilename=FrendsLauncher-{#AppVersion}-setup
 SetupIconFile=..\program_info\frendslauncher.ico
 UninstallDisplayIcon={app}\frendslauncher.exe
-UninstallDisplayName=Frends Launcher 1.2
+UninstallDisplayName=Frends Launcher {#AppVersion}
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern

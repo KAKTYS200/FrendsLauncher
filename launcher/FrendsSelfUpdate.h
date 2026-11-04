@@ -40,6 +40,11 @@ inline constexpr auto kApplyFlag = "--frends-apply-update";
  * build as arguments. Both paths are passed explicitly because this runs before
  * QCoreApplication exists, and its path helpers return nothing at that point.
  *
+ * After copying, files that the new release no longer ships are removed; in a
+ * portable install (portable.txt or a UserData folder present) only launcher
+ * binaries outside the user-data subtrees are deleted, so instances, accounts
+ * and settings survive. Removal failures are logged, never fatal.
+ *
  * Only does anything when the process was started with kApplyFlag; the return
  * value says whether that was the case, in which case the caller must exit
  * instead of showing the launcher.

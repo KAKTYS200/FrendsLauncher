@@ -9,6 +9,7 @@
  */
 
 #include <QFile>
+#include <QDir>
 #include <QTemporaryDir>
 #include <QTest>
 
@@ -103,6 +104,83 @@ class FrendsSelfUpdateTest : public QObject {
         // A file that is not there cannot be hashed, so it cannot be trusted.
         QVERIFY(!FrendsSelfUpdate::archiveMatchesDigest(dir.filePath(QStringLiteral("absent.zip")),
                                                        QStringLiteral("sha256:") + QStringLiteral("00").repeated(32)));
+    }
+
+    // The helper copies the new build over the old one and restarts; the test
+    // exe path it would restart is a plain text file, and starting that fails
+    // silently, which is exactly what the production process does not do.
+    void test_ApplyRemovesStaleFilesInPortable()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const auto source = dir.filePath(QStringLiteral("source"));
+        const auto target = dir.filePath(QStringLiteral("target"));
+        QVERIFY(QDir().mkpath(source));
+        QVERIFY(QDir().mkpath(target));
+
+        // The new release: launcher binary and two DLLs.
+        QVERIFY(writeFile(QDir(source).filePath(QStringLiteral("frendslauncher.exe")), "new exe"));
+        QVERIFY(writeFile(QDir(source).filePath(QStringLiteral("fresh.dll")), "new dll"));
+        QVERIFY(writeFile(QDir(source).filePath(QStringLiteral("new.dll")), "another dll"));
+
+        // The old install: the same files, a DLL the release dropped, and user
+        // data that must survive: accounts, the portable marker, and mods or
+        // natives inside instances/.
+        QVERIFY(writeFile(QDir(target).filePath(QStringLiteral("frendslauncher.exe")), "old exe"));
+        QVERIFY(writeFile(QDir(target).filePath(QStringLiteral("fresh.dll")), "old dll"));
+        QVERIFY(writeFile(QDir(target).filePath(QStringLiteral("stale.dll")), "dropped"));
+        QVERIFY(writeFile(QDir(target).filePath(QStringLiteral("accounts.json")), "{}"));
+        QVERIFY(writeFile(QDir(target).filePath(QStringLiteral("portable.txt")), ""));
+        QVERIFY(QDir().mkpath(QDir(target).filePath(QStringLiteral("instances/some/natives"))));
+        QVERIFY(writeFile(QDir(target).filePath(QStringLiteral("instances/some/natives/lwjgl.dll")), "user dll"));
+
+        const QStringList arguments{ QDir(target).filePath(QStringLiteral("frendslauncher.exe")),
+                                     QStringLiteral("--frends-apply-update"), target, source };
+        QVERIFY(FrendsSelfUpdate::runUpdateHelperIfRequested(arguments));
+
+        // New files arrived and the dropped DLL is gone...
+        QVERIFY(QFile::exists(QDir(target).filePath(QStringLiteral("new.dll"))));
+        QVERIFY(!QFile::exists(QDir(target).filePath(QStringLiteral("stale.dll"))));
+        // ...while user data and the portable marker survived.
+        QVERIFY(QFile::exists(QDir(target).filePath(QStringLiteral("accounts.json"))));
+        QVERIFY(QFile::exists(QDir(target).filePath(QStringLiteral("portable.txt"))));
+        QVERIFY(QFile::exists(QDir(target).filePath(QStringLiteral("instances/some/natives/lwjgl.dll"))));
+    }
+
+    void test_ApplyRemovesEveryStaleFileInInstalledTarget()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const auto source = dir.filePath(QStringLiteral("source"));
+        const auto target = dir.filePath(QStringLiteral("target"));
+        QVERIFY(QDir().mkpath(source));
+        QVERIFY(QDir().mkpath(target));
+
+        QVERIFY(writeFile(QDir(source).filePath(QStringLiteral("frendslauncher.exe")), "new exe"));
+        QVERIFY(writeFile(QDir(source).filePath(QStringLiteral("new.dll")), "new dll"));
+
+        // An installed folder holds launcher files only, so without portable.txt
+        // everything missing from the release counts as stale, including a
+        // leftover accounts.json.
+        QVERIFY(writeFile(QDir(target).filePath(QStringLiteral("frendslauncher.exe")), "old exe"));
+        QVERIFY(writeFile(QDir(target).filePath(QStringLiteral("stale.dll")), "old dll"));
+        QVERIFY(writeFile(QDir(target).filePath(QStringLiteral("accounts.json")), "{}"));
+
+        const QStringList arguments{ QDir(target).filePath(QStringLiteral("frendslauncher.exe")),
+                                     QStringLiteral("--frends-apply-update"), target, source };
+        QVERIFY(FrendsSelfUpdate::runUpdateHelperIfRequested(arguments));
+
+        QVERIFY(QFile::exists(QDir(target).filePath(QStringLiteral("new.dll"))));
+        QVERIFY(!QFile::exists(QDir(target).filePath(QStringLiteral("stale.dll"))));
+        QVERIFY(!QFile::exists(QDir(target).filePath(QStringLiteral("accounts.json"))));
+    }
+
+    static bool writeFile(const QString& path, const QByteArray& content)
+    {
+        QFile file(path);
+        if (!file.open(QIODevice::WriteOnly))
+            return false;
+        return file.write(content) == content.size();
     }
 
    private:

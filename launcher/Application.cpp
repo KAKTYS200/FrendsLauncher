@@ -67,6 +67,7 @@
 #include "ui/pages/global/JavaPage.h"
 #include "ui/pages/global/LanguagePage.h"
 #include "ui/pages/global/LauncherPage.h"
+#include "ui/pages/global/FrendSkinPage.h"
 #include "ui/pages/global/MinecraftPage.h"
 #include "ui/pages/global/ProxyPage.h"
 
@@ -674,11 +675,11 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         // carries the latest version and the executable download URL.
         m_settings->registerSetting("FrendsLauncherUpdateUrl", QString());
         // Frend Skin: the launcher publishes the skins of its accounts locally.
-        // The settings only exist while the feature is compiled in: registering
-        // them unconditionally left keys in the config that matched no code and
-        // no checkbox, because every reader of them sits behind FrendSkins::ENABLED.
+        // The settings only exist while the feature is compiled in; the master
+        // switch and the skin library live on the "Скины" settings page. On by
+        // default, so a bound skin reaches the game without extra steps.
         if (FrendSkins::ENABLED) {
-            m_settings->registerSetting("FrendSkinEnabled", false);
+            m_settings->registerSetting("FrendSkinEnabled", true);
             m_settings->registerSetting("FrendSkinPort", 0);
             m_settings->registerSetting("FrendSkinBindings", QString());
         }
@@ -944,6 +945,7 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         {
             m_globalSettingsProvider = std::make_unique<GenericPageProvider>(tr("Settings"));
             m_globalSettingsProvider->addPage<LauncherPage>();
+            m_globalSettingsProvider->addPage<FrendSkinPage>();
             m_globalSettingsProvider->addPage<LanguagePage>();
             m_globalSettingsProvider->addPage<AppearancePage>();
             m_globalSettingsProvider->addPage<MinecraftPage>();
@@ -1021,9 +1023,9 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         qInfo() << "<> Instances loaded.";
     }
 
-    // Frend Skin: the local skin publisher for the accounts. The feature is
-    // switched off for now (see FrendSkins::ENABLED), so the server is not even
-    // constructed: no port is opened and no bindings file is read.
+    // Frend Skin: the local skin publisher for the accounts. Whether it
+    // actually listens is up to the FrendSkinEnabled setting (the "Скины"
+    // settings page); constructing it here keeps the bindings ready for launch.
     if (FrendSkins::ENABLED) {
         m_frendSkin.reset(new FrendSkinServer(this));
         initFrendSkin();

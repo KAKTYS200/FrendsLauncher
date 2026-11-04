@@ -978,6 +978,8 @@ SET(LAUNCHER_SOURCES
     ui/pages/global/MinecraftPage.h
     ui/pages/global/LauncherPage.cpp
     ui/pages/global/LauncherPage.h
+    ui/pages/global/FrendSkinPage.cpp
+    ui/pages/global/FrendSkinPage.h
     ui/pages/global/AppearancePage.h
     ui/pages/global/ProxyPage.cpp
     ui/pages/global/ProxyPage.h
@@ -1246,6 +1248,7 @@ qt_wrap_ui(LAUNCHER_UI
     ui/pages/global/AccountListPage.ui
     ui/pages/global/JavaPage.ui
     ui/pages/global/LauncherPage.ui
+    ui/pages/global/FrendSkinPage.ui
     ui/pages/global/APIPage.ui
     ui/pages/global/ProxyPage.ui
     ui/pages/global/ExternalToolsPage.ui

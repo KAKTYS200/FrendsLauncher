@@ -1234,10 +1234,17 @@ void MainWindow::frendsUpdateLauncher()
         // GitHub reports what it stored for the asset; it is the only party that
         // can say whether the file that arrives is the one that was published.
         QString downloadDigest;
+        // Only accept archives whose name carries this build's platform
+        // ("FrendsLauncher-Windows-..." on a Windows build), so a foreign zip
+        // attached to the same release can never be installed. Builds without
+        // a platform token keep the old behaviour of taking any archive.
+        const auto platformToken = QString(BuildConfig.BUILD_ARTIFACT).toLower().section(QStringLiteral("-qt"), 0, 0);
         for (const auto& value : release.value("assets").toArray()) {
             const auto asset = value.toObject();
             const auto name = asset.value("name").toString();
             if (!name.endsWith(QStringLiteral(".zip"), Qt::CaseInsensitive))
+                continue;
+            if (!platformToken.isEmpty() && !name.toLower().contains(platformToken))
                 continue;
             // Prefer the portable build when a release has several archives.
             if (downloadUrl.isEmpty() || name.contains(QStringLiteral("portable"), Qt::CaseInsensitive)) {

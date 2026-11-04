@@ -122,9 +122,9 @@ SkinManageDialog::SkinManageDialog(QWidget* parent, MinecraftAccountPtr acct)
     // previewed here, but applying them needs a real login.
     if (m_acct->accountType() == AccountType::Offline) {
         auto* notice = new QLabel(
-            tr("Оффлайн-аккаунт: скин сохранится в лаунчере (Frend Skin) и будет раздаваться другим игрокам "
-               "Frend Launcher. Чтобы он появился в самой игре, в сборке должен стоять источник скинов "
-               "(мод CustomSkinLoader) — лаунчер может поставить его сам.\n"
+            tr("Оффлайн-аккаунт: скин сохранится в лаунчере (Frend Skin) и появится в игре без модов — "
+               "при запуске любой версии лаунчер сам кладёт его в файлы клиента и передаёт игре. "
+               "Другие игроки Frend Launcher увидят ваш скин через местный сервер сессий.\n"
                "Для официальной загрузки на серверы Mojang нужен аккаунт Microsoft."),
             this);
         notice->setWordWrap(true);

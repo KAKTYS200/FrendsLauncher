@@ -22,7 +22,7 @@
 | | Файл | Размер | Что это |
 |---|---|---|---|
 | **Установщик** | `FrendsLauncher-1.2-setup.exe` — [страница релиза](https://github.com/KAKTYS200/FrendsLauncher/releases/latest) | ~32 МБ | Ставится в `Program Files`, добавляет ярлык в меню «Пуск» и удаляется из «Программ и компонентов» |
-| **Портативная** | [FrendsLauncher-portable.zip](https://github.com/KAKTYS200/FrendsLauncher/releases/latest/download/FrendsLauncher-portable.zip) | ~41 МБ | Распаковать в любую папку и запустить `frendslauncher.exe`, установка не нужна |
+| **Портативная** | [FrendsLauncher-Windows-portable.zip](https://github.com/KAKTYS200/FrendsLauncher/releases/latest/download/FrendsLauncher-Windows-portable.zip) | ~41 МБ | Распаковать в любую папку и запустить `frendslauncher.exe`, установка не нужна |
 
 **Требования:** Windows 10/11 x64. Java искать не обязательно — лаунчер сам скачивает нужную версию при первом запуске, а если Java уже установлена, использует её.
 
@@ -160,7 +160,7 @@ windeployqt --release --no-translations --no-system-d3d-compiler --no-opengl-sw 
 
 # 2. Портативный архив — обязательно 7-Zip, не Compress-Archive
 cd dist/FrendsLauncher
-7z a -tzip -mcu=off -mx=9 ../FrendsLauncher-portable.zip *
+7z a -tzip -mcu=off -mx=9 ../FrendsLauncher-Windows-portable.zip *
 
 # 3. Установщик (Inno Setup 6)
 ISCC.exe installer/frends.iss

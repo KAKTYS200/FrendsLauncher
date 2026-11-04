@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>FrendSkinPage</class>
+ <widget class="QWidget" name="FrendSkinPage">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>520</width>
+    <height>320</height>
+   </rect>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QCheckBox" name="skinEnabledCheckBox">
+     <property name="text">
+      <string>Показывать скины в игре (Frend Skin)</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="infoLabel">
+     <property name="text">
+      <string>Скины оффлайн-аккаунтов работают без модов: при запуске любой версии лаунчер сам кладёт выбранный скин в файлы клиента и передаёт его игре. Игроки Frend Launcher видят скины друг друга через местный сервер сессий. Официальные скины на серверах Mojang доступны только аккаунту Microsoft.</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QPushButton" name="openSkinLibraryButton">
+     <property name="text">
+      <string>Открыть библиотеку скинов…</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

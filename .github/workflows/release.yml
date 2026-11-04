@@ -1,9 +1,10 @@
 name: Build Application and Make Release
 
+# Frends Launcher ships Windows builds from frends-release.yml. This inherited
+# workflow still triggers on a tag only when explicitly asked, so a tag does not
+# produce two releases at once.
 on:
-  push:
-    tags:
-      - "*"
+  workflow_dispatch:
 
 permissions: {}
 

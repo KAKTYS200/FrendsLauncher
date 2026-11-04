@@ -1,0 +1,220 @@
+name: Frends Release
+
+# Builds the launcher the way the in-app updater expects it: a portable zip
+# whose root holds frendslauncher.exe, an Inno Setup installer, and a SHA-256
+# for each. Separate from the inherited Prism workflows on purpose - those
+# still build PrismLauncher-* artifacts for Linux, macOS and MSYS2, none of
+# which the updater can use.
+#
+# Publishing a tag is the whole release: the updater asks GitHub for
+# /releases/latest, picks the .zip asset whose name carries this build's
+# platform ("FrendsLauncher-Windows-...") and prefers the portable one, then
+# checks it against the digest the API reports, so a release built by hand is
+# not needed any more. A manual run with a release-tag publishes the same way;
+# without a tag it only produces downloadable artifacts.
+
+on:
+  workflow_dispatch:
+    inputs:
+      release-tag:
+        description: "Tag to build and publish (for example v1.3). Left empty, the build is uploaded as artifacts without a release."
+        type: string
+        required: false
+  push:
+    tags:
+      - "v*"
+
+permissions: {}
+
+concurrency:
+  group: frends-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build Windows release
+    runs-on: windows-2022
+    permissions:
+      contents: write
+
+    env:
+      ARTIFACT_NAME: FrendsLauncher-Windows-MSVC
+      BUILD_PLATFORM: official
+      BUILD_TYPE: Release
+      CMAKE_PRESET: windows_msvc
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: true
+
+      # vcvars64 provides the compiler, VCPKG_ROOT comes with the runner's
+      # vcpkg installation and the windows_msvc preset reads it.
+      - name: Enter VS Developer shell
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: amd64
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: zulu
+          java-version: 17
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          aqtversion: "==3.1.*"
+          version: "6.10.2"
+          modules: qtimageformats qtnetworkauth
+
+      - name: Configure
+        shell: pwsh
+        run: cmake --preset "$env:CMAKE_PRESET"
+
+      - name: Build
+        shell: pwsh
+        run: cmake --build --preset "$env:CMAKE_PRESET" --config "$env:BUILD_TYPE"
+
+      # Unit tests gate the release: a tagged build that breaks its own tests
+      # must not ship. The windows_msvc test preset turns output on failure.
+      # The runner's working directory is ASCII, which the tests require.
+      - name: Run tests
+        shell: pwsh
+        run: ctest --preset "$env:CMAKE_PRESET" --build-config "$env:BUILD_TYPE"
+
+      # The version the binary reports has to match the tag, or the updater
+      # compares against the wrong number and either loops or stays silent.
+      # Read on every run, so a manual build still gets a named installer.
+      - name: Read version
+        shell: pwsh
+        run: |
+          $major = (Select-String -Path CMakeLists.txt -Pattern 'set\(Launcher_VERSION_MAJOR (\d+)\)').Matches[0].Groups[1].Value
+          $minor = (Select-String -Path CMakeLists.txt -Pattern 'set\(Launcher_VERSION_MINOR (\d+)\)').Matches[0].Groups[1].Value
+          $patch = (Select-String -Path CMakeLists.txt -Pattern 'set\(Launcher_VERSION_PATCH (\d+)\)').Matches[0].Groups[1].Value
+          "VERSION=$major.$minor.$patch" | Out-File -Append $env:GITHUB_ENV
+
+      - name: Compare build version with the tag
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}".TrimStart('v')
+          if ($env:VERSION -ne $tag) {
+            echo "::error::CMakeLists.txt says $env:VERSION but the tag is $tag. Bump the version before tagging."
+            exit 1
+          }
+
+      - name: Package portable
+        shell: pwsh
+        run: |
+          cmake --install build --config $env:BUILD_TYPE --prefix install-portable
+          # portable.txt is what makes the launcher keep its data next to the
+          # executable instead of in %APPDATA%; the updater relies on the same shape.
+          cmake --install build --config $env:BUILD_TYPE --prefix install-portable --component portable
+
+          if (-not (Test-Path install-portable/frendslauncher.exe)) {
+            echo "::error::install-portable does not contain frendslauncher.exe"
+            exit 1
+          }
+
+      - name: Package installer
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress -y
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { echo "::error::ISCC.exe not found"; exit 1 }
+          # frends.iss reads its files from ..\dist\FrendsLauncher and writes to ..\dist
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item install-portable dist/FrendsLauncher -Recurse -Force
+          # portable.txt flips the launcher into portable mode (data next to the
+          # exe). The installed build must not carry it, or it writes to its
+          # program folder instead of %APPDATA%.
+          Remove-Item dist/FrendsLauncher/portable.txt -Force
+          & $iscc "/DAppVersion=$env:VERSION" installer/frends.iss
+          if (-not (Test-Path "dist/FrendsLauncher-$env:VERSION-setup.exe")) {
+            echo "::error::Inno Setup produced no installer"
+            exit 1
+          }
+
+      - name: Pack archives
+        shell: pwsh
+        run: |
+          $version = $env:VERSION
+          # The updater looks for a .zip and prefers a name containing "portable".
+          # Must be 7-Zip with -mcu=off: the launcher's unpacker reads entry
+          # names as CP437 unless the UTF-8 flag is set, and Compress-Archive
+          # writes names that break (see the README packaging rules).
+          $sevenZip = "C:\Program Files\7-Zip\7z.exe"
+          if (-not (Test-Path $sevenZip)) { echo "::error::7-Zip not found"; exit 1 }
+          # The name must carry the platform ("Windows"): the updater only takes
+          # archives whose name matches the build it runs on.
+          & $sevenZip a -tzip -mcu=off -mx=9 FrendsLauncher-Windows-portable.zip install-portable\*
+          if ($LASTEXITCODE -ne 0) { echo "::error::7-Zip failed"; exit 1 }
+          Get-ChildItem dist -Filter "FrendsLauncher-*-setup.exe" | ForEach-Object { "INSTALLER=$($_.FullName)" | Out-File -Append $env:GITHUB_ENV }
+
+          # GitHub reports this digest for every uploaded asset, and the launcher
+          # refuses an archive that does not match it.
+          $hash = (Get-FileHash FrendsLauncher-Windows-portable.zip -Algorithm SHA256).Hash.ToLower()
+          "PORTABLE_SHA256=sha256:$hash" | Out-File -Append $env:GITHUB_ENV
+
+          $installerHash = (Get-FileHash $env:INSTALLER -Algorithm SHA256).Hash.ToLower()
+          "INSTALLER_SHA256=sha256:$installerHash" | Out-File -Append $env:GITHUB_ENV
+
+      - name: Upload archives
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: |
+            FrendsLauncher-Windows-portable.zip
+            ${{ env.INSTALLER }}
+          if-no-files-found: error
+
+      - name: Publish release
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Frends Launcher ${{ env.VERSION }}
+          generate_release_notes: true
+          body: |
+            Портативная сборка: `FrendsLauncher-Windows-portable.zip` — распаковать и запустить `frendslauncher.exe`.
+            Установщик: `FrendsLauncher-${{ env.VERSION }}-setup.exe`.
+
+            SHA-256 (лаунчер сверяет его сам перед обновлением):
+            ```
+            portable ${{ env.PORTABLE_SHA256 }}
+            setup    ${{ env.INSTALLER_SHA256 }}
+            ```
+          files: |
+            FrendsLauncher-Windows-portable.zip
+            ${{ env.INSTALLER }}
+          fail_on_unmatched_files: true
+
+      - name: Publish release (manual)
+        # A manual run with a release-tag publishes the build just made at that
+        # tag, so the tag does not have to be pushed separately. Fails if the
+        # tag already has a release - push the tag to rebuild instead.
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.release-tag != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          $tag = "${{ inputs.release-tag }}"
+          if ($env:VERSION -ne $tag.TrimStart('v')) {
+            echo "::error::CMakeLists.txt says $env:VERSION but the requested tag is $tag. Bump the version before releasing."
+            exit 1
+          }
+          $installerName = Split-Path $env:INSTALLER -Leaf
+          $body = @"
+          Портативная сборка: ``FrendsLauncher-Windows-portable.zip`` — распаковать и запустить ``frendslauncher.exe``.
+          Установщик: ``$installerName``.
+
+          SHA-256 (лаунчер сверяет его сам перед обновлением):
+          ``````
+          portable $env:PORTABLE_SHA256
+          setup    $env:INSTALLER_SHA256
+          ``````
+          "@
+          $body | Out-File -Encoding utf8 release-notes.md
+          gh release create "$tag" FrendsLauncher-Windows-portable.zip $env:INSTALLER --target "${{ github.sha }}" --title "Frends Launcher $env:VERSION" --notes-file release-notes.md

@@ -75,6 +75,7 @@ class AccountListPage : public QMainWindow, public BasePage {
     void on_actionRefresh_triggered();
     void on_actionSetDefault_triggered();
     void on_actionNoDefault_triggered();
+    void on_actionSkinManager_triggered();
     void on_actionMoveUp_triggered();
     void on_actionMoveDown_triggered();
 

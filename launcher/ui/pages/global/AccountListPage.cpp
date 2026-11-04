@@ -46,6 +46,7 @@
 #include "ui/dialogs/ChooseOfflineNameDialog.h"
 #include "ui/dialogs/CustomMessageBox.h"
 #include "ui/dialogs/MSALoginDialog.h"
+#include "ui/dialogs/skins/SkinManageDialog.h"
 
 #include "Application.h"
 
@@ -194,6 +195,24 @@ void AccountListPage::on_actionNoDefault_triggered()
     m_accounts->setDefaultAccount(nullptr);
 }
 
+void AccountListPage::on_actionSkinManager_triggered()
+{
+    // The selected account when there is one, otherwise the default one: the
+    // skin is bound to the player name, so the account just picks the name.
+    QModelIndexList selection = ui->listView->selectionModel()->selectedIndexes();
+    MinecraftAccountPtr account = selection.size() > 0
+                                      ? selection.first().data(AccountList::PointerRole).value<MinecraftAccountPtr>()
+                                      : m_accounts->defaultAccount();
+    if (!account) {
+        CustomMessageBox::selectable(this, tr("Скины"),
+                                     tr("Нет аккаунта — добавьте его на странице «Аккаунты»."), QMessageBox::Information)
+            ->exec();
+        return;
+    }
+    SkinManageDialog dialog(this, account);
+    dialog.exec();
+}
+
 void AccountListPage::updateButtonStates()
 {
     // If there is no selection, disable buttons that require something selected.
@@ -216,6 +235,7 @@ void AccountListPage::updateButtonStates()
     ui->actionRemove->setEnabled(accountIsReady);
     ui->actionSetDefault->setEnabled(accountIsReady);
     ui->actionRefresh->setEnabled(accountIsReady && accountIsOnline);
+    ui->actionSkinManager->setEnabled(hasSelection || m_accounts->defaultAccount() != nullptr);
 
     if (m_accounts->defaultAccount().get() == nullptr) {
         ui->actionNoDefault->setEnabled(false);

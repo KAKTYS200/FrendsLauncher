@@ -27,6 +27,7 @@
 #include <QFileInfo>
 #include <QProcess>
 #include <QRegularExpression>
+#include <QSet>
 #include <QStandardPaths>
 #include <QThread>
 
@@ -57,6 +58,85 @@ QStringList filesIn(const QString& source)
         out.append(QDir(source).relativeFilePath(it.filePath()));
     }
     return out;
+}
+
+/// Top-level names of a portable install that hold user data rather than
+/// launcher files: instances, downloaded libraries and assets, caches, logs
+/// and the alternate "UserData" layout. Everything below them belongs to the
+/// user and survives an update untouched.
+const QStringList kPortableUserDataDirs = { QStringLiteral("instances"),
+                                            QStringLiteral("libraries"),
+                                            QStringLiteral("assets"),
+                                            QStringLiteral("cache"),
+                                            QStringLiteral("mods"),
+                                            QStringLiteral("meta"),
+                                            QStringLiteral("translations"),
+                                            QStringLiteral("logs"),
+                                            QStringLiteral("UserData") };
+
+/// Appends every file under `directory` to `out` as a path relative to the
+/// top-level call, skipping the given top-level subtrees.
+void collectFiles(const QString& directory, const QString& prefix, const QStringList& skippedTopLevels, QStringList& out)
+{
+    const QDir dir(directory);
+    const auto entries = dir.entryInfoList(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot | QDir::Hidden);
+    for (const auto& entry : entries) {
+        const auto relative = prefix.isEmpty() ? entry.fileName() : prefix + QLatin1Char('/') + entry.fileName();
+        if (entry.isDir()) {
+            if (prefix.isEmpty() && skippedTopLevels.contains(entry.fileName()))
+                continue;
+            collectFiles(entry.absoluteFilePath(), relative, skippedTopLevels, out);
+        } else {
+            out.append(relative);
+        }
+    }
+}
+
+/// True when `targetDir` is a portable install, meaning user data lives in it.
+bool isPortableInstall(const QString& targetDir)
+{
+    return QFile::exists(QDir(targetDir).filePath(QStringLiteral("portable.txt"))) ||
+           QDir(targetDir).exists(QStringLiteral("UserData"));
+}
+
+/**
+ * Removes files `targetDir` has but the new release no longer ships.
+ *
+ * A DLL dropped from the release must not linger: the next release could ship
+ * a new file of the same name, and stale binaries are also the sort of thing
+ * scanners flag. A target without portable.txt is a plain installed
+ * application folder, so every file missing from the release is removable. In
+ * a portable install the folder also holds user data underneath
+ * kPortableUserDataDirs, so only launcher binaries (.exe/.dll/.pdb) outside
+ * those subtrees are considered, and files like accounts.json, settings or
+ * portable.txt itself are always kept. Removal is best effort: a locked file
+ * is logged and left for the next update.
+ */
+void removeStaleFiles(const QString& targetDir, const QStringList& shipped)
+{
+    const auto shippedSet = QSet<QString>(shipped.cbegin(), shipped.cend());
+    const bool portable = isPortableInstall(targetDir);
+    const QStringList skippedTopLevels = portable ? kPortableUserDataDirs : QStringList{};
+    const QStringList appSuffixes = { QStringLiteral("exe"), QStringLiteral("dll"), QStringLiteral("pdb") };
+
+    QStringList present;
+    collectFiles(targetDir, QString(), skippedTopLevels, present);
+
+    int removed = 0;
+    int failed = 0;
+    for (const auto& relative : present) {
+        if (shippedSet.contains(relative))
+            continue;
+        if (portable && !appSuffixes.contains(QFileInfo(relative).suffix().toLower(), Qt::CaseInsensitive))
+            continue;
+        if (QFile::remove(QDir(targetDir).absoluteFilePath(relative)))
+            ++removed;
+        else {
+            qWarning() << "[self-update] could not remove obsolete" << relative;
+            ++failed;
+        }
+    }
+    qWarning() << "[self-update] removed" << removed << "obsolete files, failed" << failed;
 }
 
 }  // namespace
@@ -160,9 +240,10 @@ bool runUpdateHelperIfRequested(const QStringList& arguments)
 
     qWarning() << "[self-update] applying" << sourceDir << "->" << targetDir;
 
+    const auto shipped = filesIn(sourceDir);
     int copied = 0;
     int failed = 0;
-    for (const auto& relative : filesIn(sourceDir)) {
+    for (const auto& relative : shipped) {
         const auto from = QDir(sourceDir).absoluteFilePath(relative);
         const auto to = QDir(targetDir).absoluteFilePath(relative);
 
@@ -175,6 +256,9 @@ bool runUpdateHelperIfRequested(const QStringList& arguments)
         }
     }
 
+    // Now that the new files are in place, files the release no longer ships
+    // must not stay behind (see removeStaleFiles for what is kept).
+    removeStaleFiles(targetDir, shipped);
     qWarning() << "[self-update] copied" << copied << "files, failed" << failed;
 
     // Restart the installed copy, forwarding whatever the launcher was started

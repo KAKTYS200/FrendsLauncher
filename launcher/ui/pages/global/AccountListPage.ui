@@ -58,6 +58,7 @@
    <addaction name="actionRemove"/>
    <addaction name="actionSetDefault"/>
    <addaction name="actionNoDefault"/>
+   <addaction name="actionSkinManager"/>
    <addaction name="actionMoveUp"/>
    <addaction name="actionMoveDown"/>
   </widget>
@@ -105,6 +106,14 @@
   <action name="actionMoveDown">
    <property name="text">
     <string>Move &amp;Down</string>
+   </property>
+  </action>
+  <action name="actionSkinManager">
+   <property name="icon">
+    <iconset theme="accounts"/>
+   </property>
+   <property name="text">
+    <string>Скины…</string>
    </property>
   </action>
  </widget>
