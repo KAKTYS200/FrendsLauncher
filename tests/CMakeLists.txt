@@ -69,3 +69,9 @@ ecm_add_test(ExtractZipTask_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSIO
 
 ecm_add_test(FrendsSelfUpdate_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
     TEST_NAME FrendsSelfUpdate)
+
+# The parse tests locate their fixtures with QFINDTESTDATA, which starts at the
+# test working directory (build/tests). Copy the data there at configure time,
+# so ctest passes on a clean checkout (CI included). Without it the tests die
+# silently before printing anything.
+file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/testdata" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
